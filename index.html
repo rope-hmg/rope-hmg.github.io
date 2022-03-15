@@ -12,6 +12,27 @@
                 overflow-x: hidden;
                 text-align: center;
             }
+
+            .work-container {
+                display: grid;
+                grid-template-columns: 1rem auto;
+                grid-template-areas:
+                    "magin wren"
+                    "magin hallmark"
+                    "magin ebuyer";
+            }
+
+            .work-item-wren {
+                grid-area: wren;
+            }
+
+            .work-item-hallmark {
+                grid-area: wren;
+            }
+
+            .work-item-ebuyer {
+                grid-area: wren;
+            }
         </style>
     </head>
 
@@ -19,25 +40,31 @@
         <h1>Hector Maddock-Greene</h1>
 
         <article>
-            <h2>Work</h2>
+            Currently working for a large company as a senior developer leading two fast paced agile scrum teams.
+        </article>
 
-            <section>
+        <h2>Work</h2>
+
+        <article class=work-container>
+            <section class=work-item-wren>
                 <h3>Wren Kitchens</h3>
 
                 <h4>Senior Developer<h4> 2020 - Current
                 <ul>
-                    <li>Architecture team lead</li>
-                    <li>Technical Improvements team lead</li>
-                    <li>Architecture team srum master</li>
-                    <li>Technical Improvements team srum master</li>
-                    <li>Converted HTML canvas renderer to WebGL</li>
+                    <li>Architecture team lead + scrum master</li>
+                    <li>Technical Improvements team lead + scrum master</li>
+                    <li>Scrum duties for two teams</li>
+                    <li>High level visioning with stake holders</li>
+                    <li>Replaced HTML5 canvas renderer with WebGL</li>
                     <li>Implemented a typesafe ECS system in Typescript</li>
-                    <li>Implemented a typesafe ECS system in Typescript</li>
+                    <li>Transitioned the application from an event driven architecture to a loop based architecture</li>
+                    <li>Implemented spatial partitioning to improve collision detection performance</li>
                 </ul>
 
                 <h4>Intermediate Developer</h4>  2019 - 2020
                 <ul>
                     <li>Managing the graduate scheme</li>
+                    <li>Managing the webpack build system</li>
                     <li>Interviewing candidates</li>
                     <li>Handling deployments </li>
                     <li>Working on the US conversion project</li>
@@ -52,7 +79,7 @@
                 </ul>
             </section>
 
-            <section>
+            <section class=work-item-hallmark>
                 <h3>Hallmark Panels</h3>
 
                 <h4>Freelance</h4>  2017 - 2018
@@ -72,7 +99,7 @@
                 </ul>
             </section>
 
-            <section>
+            <section class=work-item-ebuyer>
                 <h3>Ebuyer</h3>
 
                 <h4>IT Service Desk</h4>  2010 - 2011
@@ -85,9 +112,9 @@
             </section>
         </article>
 
-        <article>
-            <h2>Education</h2>
+        <h2>Education</h2>
 
+        <article>
             <section>
                 <h4>Hull College</h4>  2012 - 2014
 
