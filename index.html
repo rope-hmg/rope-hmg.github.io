@@ -369,12 +369,6 @@
                 }
             }
 
-            function renderTextRect(context, textL, textW, canvas) {
-                context.globalCompositeOperation = "destination-out";
-                context.fillRect(textL, 0, textW, canvas.height);
-                context.globalCompositeOperation = "source-over";
-            }
-
             function renderBallShells(context, balls) {
                 for (let i = 0; i < balls.length; i += 1) {
                     const { position, colour, radius } = balls[i];
@@ -450,7 +444,7 @@
 
                     // Render the balls in their new positions.
                     renderBallPaths(context, balls);
-                    renderTextRect(context, textL, textW, canvas);
+                    context.clearRect(textL, 0, textW, canvas.height);
                     renderBallShells(context, balls)
 
                     // Request next frame
