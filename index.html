@@ -1,55 +1,490 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="utf-8">
+
         <title>Resume</title>
 
         <style>
+            :root {
+                --h1-colour: #978E7F;
+                --h2-colour: #B49B73;
+                --bg-colour: #F4F4F4;
+                --font-colour: #2D2620;
+                --link-colour: #AFA597;
+            }
+
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --h1-colour: #978E7F;
+                    --h2-colour: #B49B73;
+                    --bg-colour: #2D2620;
+                    --font-colour: #F4F4F4;
+                    --link-colour: #AFA597;
+                }
+            }
+
             body {
+                display: grid;
+                justify-content: center;
+
                 min-width: 368px;
                 margin: 0;
-                background: #f4f4f4;
+                background: var(--bg-colour);
+                color:  var(--font-colour);
                 font-family: Arial, Helvetica, sans-serif;
                 overflow-x: hidden;
-                text-align: center;
+
             }
 
-            .work-container {
+            h1 {
+                color: var(--h1-colour);
+            }
+
+            h2 {
+                color: var(--h2-colour);
+            }
+
+            a {
+                color: var(--link-colour);
+            }
+
+            #background-canvas {
+                position: fixed;
+                z-index: -1;
+                width: 100%;
+                height: 100%;
+            }
+
+            .skill-container {
                 display: grid;
-                grid-template-columns: 1rem auto;
-                grid-template-areas:
-                    "magin wren"
-                    "magin hallmark"
-                    "magin ebuyer";
+                grid-template:
+                    "title  title        title"    auto
+                    "expert intermediate beginner" auto
+                   / 33%    33%          33%;
+
+                width: 100%;
             }
 
-            .work-item-wren {
-                grid-area: wren;
+            .skill-title {
+                grid-area: title;
             }
 
-            .work-item-hallmark {
-                grid-area: wren;
+            .skill-expert {
+                grid-area: expert;
             }
 
-            .work-item-ebuyer {
-                grid-area: wren;
+            .skill-intermediate {
+                grid-area: intermediate;
+            }
+
+            .skill-beginner {
+                grid-area: beginner;
             }
         </style>
+
+        <script type="text/javascript">
+            class Vec2 {
+                static zero() {
+                    return new Vec2(0, 0);
+                }
+
+                static positiveX() { return new Vec2( 1,  0); }
+                static negativeX() { return new Vec2(-1,  0); }
+                static positiveY() { return new Vec2( 0,  1); }
+                static negativeY() { return new Vec2( 0, -1); }
+
+                static randomUnit() {
+                    const x = randomRange(-1, 1);
+                    const y = randomRange(-1, 1);
+                    const v = new Vec2(x, y);
+
+                    return v.normalise();
+                }
+
+                constructor(x, y) {
+                    this.x = x;
+                    this.y = y;
+                }
+
+                dot(rhs) {
+                    return this.x * rhs.x
+                         + this.y * rhs.y;
+                }
+
+                magnitudeSquared() {
+                    return this.dot(this);
+                }
+
+                magnitude() {
+                    return Math.sqrt(this.magnitudeSquared());
+                }
+
+                normalise() {
+                    const recip = 1 / this.magnitude();
+
+                    this.x *= recip;
+                    this.y *= recip;
+
+                    return this;
+                }
+
+                negate() {
+                    this.x = -this.x;
+                    this.y = -this.y;
+                }
+
+                add(rhs, into) {
+                    into = into || Vec2.zero();
+
+                    into.x = this.x + rhs.x;
+                    into.y = this.y + rhs.y;
+
+                    return into;
+                }
+
+                addAssign(rhs) {
+                    this.x += rhs.x;
+                    this.y += rhs.y;
+
+                    return this;
+                }
+
+                sub(rhs, into) {
+                    into = into || Vec2.zero();
+
+                    into.x = this.x - rhs.x;
+                    into.y = this.y - rhs.y;
+
+                    return into;
+                }
+
+                subAssign(rhs) {
+                    this.x -= rhs.x;
+                    this.y -= rhs.y;
+
+                    return this;
+                }
+
+                mul(rhs, into) {
+                    into = into || Vec2.zero();
+
+                    into.x = this.x * rhs;
+                    into.y = this.y * rhs;
+
+                    return into;
+                }
+
+                mulAssign(rhs) {
+                    this.x *= rhs;
+                    this.y *= rhs;
+
+                    return this;
+                }
+
+                div(rhs, into) {
+                    return this.mul(1 / rhs, into);
+                }
+
+                divAssign(rhs) {
+                    return this.mulAssign(1 / rhs);
+                }
+            }
+
+            function debounce(fn, ms) {
+                let handle;
+
+                return (...args) => {
+                    clearTimeout(handle);
+                    handle = setTimeout(() => fn(...args), ms);
+                };
+            }
+
+            function randomRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            function shuffle(items) {
+                for (let i = 0; i < items.length; i += 1) {
+                    const j = randomRange(0, items.length - 1) | 0;
+
+                    const temp = items[i];
+                    items[i]   = items[j];
+                    items[j]   = temp;
+                }
+
+                return items;
+            }
+
+            const BALL_COLOURS = shuffle([
+                "#673CFA", // Purple
+                "#1E77A6", // Blue
+                "#96BF21", // Green
+                "#5782FF", // Light Blue
+                "#7CD1D0", // Dream Steam
+                "#10D3FA", // Blue Teal
+                "#FF9900", // Vitamin C
+                "#FF0033", // Strawvery Red
+            ]);
+
+            // Normals pointing in from the edges of the screen
+            const L_NORMAL = Vec2.positiveX();
+            const R_NORMAL = Vec2.negativeX();
+            const B_NORMAL = Vec2.positiveY();
+            const T_NORMAL = Vec2.negativeY();
+
+            // Avoid some garbage collection by allocating once outside the loop.
+            const velocity = Vec2.zero();
+            const para     = Vec2.zero();
+            const perp     = Vec2.zero();
+            const dist     = Vec2.zero();
+
+            let spawnTimer = 0;
+            let activating = true;
+
+            function spawnBalls(canvas) {
+                const balls = new Array(BALL_COLOURS.length);
+
+                for (let i = 0; i < BALL_COLOURS.length; i += 1) {
+                    const ball = {
+                        position:     new Vec2(canvas.width >> 1, canvas.height >> 1),
+                        radius:       randomRange(25, 50),
+                        speed:        0.3,
+                        direction:    Vec2.randomUnit(),
+                        colour:       BALL_COLOURS[i],
+                        intersecting: false,
+                    };
+
+                    balls[i] = ball;
+                }
+
+                return balls;
+            }
+
+
+            // function respawnIfOffscreen(balls, canvas) {
+            //     for (let i = 0; i < balls.length; i += 1) {
+            //         const { position, radius } = balls[i];
+            //         const { x, y }             = position;
+            //         const { width, height }    = canvas;
+
+            //         if (
+            //                x + radius < 0
+            //             || y - radius < 0
+            //             || x - radius > width
+            //             || y + radius > height
+            //         ) {
+            //             position.x = randomRange(radius, width  - radius);
+            //             position.y = randomRange(radius, height - radius);
+            //         }
+            //     }
+            // }
+
+            function updateBallPositions(balls, delta) {
+                for (let i = 0; i < balls.length; i += 1) {
+                    const ball = balls[i];
+
+                    ball.direction.mul(delta * ball.speed, velocity);
+                    ball.position.addAssign(velocity);
+                }
+            }
+
+            function reflectOffScreenEdges(balls, canvas) {
+                for (let i = 0; i < balls.length; i += 1) {
+                    const ball = balls[i];
+
+                    const { position, direction, radius } = ball;
+                    const { width, height }               = canvas
+
+                    let reflectionNormal;
+
+                         if (position.x - radius <= 0)      { reflectionNormal = L_NORMAL; position.x =          radius; }
+                    else if (position.y - radius <= 0)      { reflectionNormal = T_NORMAL; position.y =          radius; }
+                    else if (position.x + radius >= width)  { reflectionNormal = R_NORMAL; position.x = width  - radius; }
+                    else if (position.y + radius >= height) { reflectionNormal = B_NORMAL; position.y = height - radius; }
+                    else { /* Don't have to do anything here. */ }
+
+                    if (reflectionNormal) {
+                        direction.negate();
+
+                        const scalar = direction.dot(reflectionNormal);
+
+                        reflectionNormal.mul(scalar, para);
+                        direction       .sub(para,   perp);
+                        para            .sub(perp,   direction);
+                    }
+                }
+            }
+
+            function bounceOffOtherBalls(balls) {
+                for (let i = 0; i < balls.length; i += 1) {
+                    const b1 = balls[i];
+                    let   b2;
+
+                    for (
+                        let j = i + 1;
+                        j < balls.length && !b2;
+                        j += 1
+                    ) {
+                        const bj = balls[j];
+
+                        const distance = Math.hypot(
+                            b1.position.x - bj.position.x,
+                            b1.position.y - bj.position.y,
+                        );
+
+                        if (distance <= b1.radius + bj.radius) {
+                            b2 = bj;
+                        }
+                    }
+
+                    if (b2) {
+                        if (!b1.intersecting) {
+                            b1.intersecting = true;
+
+                            const temp   = b2.direction;
+                            b2.direction = b1.direction;
+                            b1.direction = temp;
+                        }
+                    } else {
+                        b1.intersecting = false;
+                    }
+                }
+            }
+
+            function renderBallPaths(context, balls) {
+                for (let i = 0; i < balls.length; i += 1) {
+                    const { position, colour, radius } = balls[i];
+
+                    context.fillStyle = colour;
+                    context.beginPath();
+                    context.arc(
+                        Math.floor(position.x),
+                        Math.floor(position.y),
+                        radius,
+                        0,
+                        2 * Math.PI,
+                    );
+                    context.fill();
+                }
+            }
+
+            function renderTextRect(context, textL, textW, canvas) {
+                context.globalCompositeOperation = "destination-out";
+                context.fillRect(textL, 0, textW, canvas.height);
+                context.globalCompositeOperation = "source-over";
+            }
+
+            function renderBallShells(context, balls) {
+                for (let i = 0; i < balls.length; i += 1) {
+                    const { position, colour, radius } = balls[i];
+
+                    context.strokeStyle = colour;
+                    context.beginPath();
+                    context.arc(
+                        Math.floor(position.x),
+                        Math.floor(position.y),
+                        radius,
+                        0,
+                        2 * Math.PI,
+                    );
+                    context.stroke();
+                }
+            }
+
+            function main() {
+                const name    = document.getElementById("name");
+                const canvas  = document.getElementById("background-canvas");
+                const context = canvas.getContext("2d", { alpha: false });
+
+                canvas.width  = window.innerWidth;
+                canvas.height = window.innerHeight;;
+
+                let {
+                    left:  textL,
+                    width: textW,
+                } = name.getClientRects()[0];
+
+                // Add some because it's wrong a bit.
+                const textWExtraBit = 16;
+
+                textW += textWExtraBit;
+
+                const debouncedSetCanvasSize = debounce(() => {
+                    canvas.width  = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    screenW       = window.innerWidth;
+                    screenH       = window.innerHeight;
+
+                    ({
+                        left:  textL,
+                        width: textW,
+                    } = name.getClientRects()[0]);
+
+                    textW += textWExtraBit;
+                }, 150);
+
+                window.addEventListener("resize", debouncedSetCanvasSize);
+
+                // TODO:
+                // Apply velocity to balls when scrolling
+
+                let balls = spawnBalls(canvas);
+
+                // Time tracking for consistent movement across different devices.
+                let cTime = performance.now();
+                let pTime;
+
+                function frame(time) {
+                    pTime = cTime;
+                    cTime = time;
+
+                    const delta = cTime - pTime;
+
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Update the balls position and handle any collisions
+                    updateBallPositions(balls, delta);
+                    reflectOffScreenEdges(balls, canvas);
+                    bounceOffOtherBalls(balls);
+
+                    // Render the balls in their new positions.
+                    renderBallPaths(context, balls);
+                    renderTextRect(context, textL, textW, canvas);
+                    renderBallShells(context, balls)
+
+                    // Request next frame
+                    requestAnimationFrame(frame);
+                }
+
+                frame(performance.now());
+            }
+
+            window.addEventListener("DOMContentLoaded", main);
+        </script>
     </head>
 
     <body>
-        <h1>Hector Maddock-Greene</h1>
+        <canvas id=background-canvas></canvas>
+
+        <h1 id=name>Hector Maddock-Greene</h1>
+
+        <p>
+            Highly experienced Typescript and Rust developer.
+        </p>
+
+        <p>
+            Currently working for a large company as a senior developer leading two fast paced agile scrum teams.
+        </p>
 
         <article>
-            Currently working for a large company as a senior developer leading two fast paced agile scrum teams.
-        </article>
+            <h2>Work</h2>
 
-        <h2>Work</h2>
-
-        <article class=work-container>
-            <section class=work-item-wren>
+            <section>
                 <h3>Wren Kitchens</h3>
 
-                <h4>Senior Developer<h4> 2020 - Current
+                <h4>Senior Developer</h4> 2020 - Current
+
                 <ul>
                     <li>Architecture team lead + scrum master</li>
                     <li>Technical Improvements team lead + scrum master</li>
@@ -79,7 +514,7 @@
                 </ul>
             </section>
 
-            <section class=work-item-hallmark>
+            <section>
                 <h3>Hallmark Panels</h3>
 
                 <h4>Freelance</h4>  2017 - 2018
@@ -99,7 +534,7 @@
                 </ul>
             </section>
 
-            <section class=work-item-ebuyer>
+            <section>
                 <h3>Ebuyer</h3>
 
                 <h4>IT Service Desk</h4>  2010 - 2011
@@ -112,9 +547,9 @@
             </section>
         </article>
 
-        <h2>Education</h2>
-
         <article>
+            <h2>Education</h2>
+
             <section>
                 <h4>Hull College</h4>  2012 - 2014
 
@@ -137,18 +572,39 @@
             </section>
         </article>
 
-        <article>
-            <h2>Skills</h2>
+        <article class=skill-container>
+            <h2 class=skill-title>Languages, Technologies and Techniques</h2>
 
-            <section>
+            <section class=skill-expert>
+                <h4>Expert</h4>
+
                 <ul>
-                    <li>Typescript (Expert)</li>
-                    <li>JavaScript (Expert)</li>
-                    <li>Rust       (Intermediate)</li>
-                    <li>C++        (Intermediate)</li>
-                    <li>C          (Intermediate)</li>
-                    <li>Dart       (Intermediate)</li>
-                    <li>Go         (Beginner)</li>
+                    <li><a href="https://www.typescriptlang.org/">Typescript</a></li>
+                    <li><a href="https://www.ecma-international.org/publications-and-standards/standards/ecma-262/">JavaScript</a></li>
+                </ul>
+            </section>
+
+            <section class=skill-intermediate>
+                <h4>Intermediate</h4>
+
+                <ul>
+                    <li><a href="https://www.rust-lang.org/">Rust</a></li>
+                    <li><a href="https://en.wikipedia.org/wiki/C_(programming_language)">C</a></li>
+                    <li><a href="https://reactjs.org/">React</a></li>
+                    <li><a href="https://angular.io/">Angular</a></li>
+                    <li><a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data">SIMD</a></li>
+                    <li><a href="https://en.wikipedia.org/wiki/Multithreading_(computer_architecture)">Multithreaded Programming</a></li>
+
+                </ul>
+            </section>
+
+            <section class=skill-beginner>
+                <h4>Beginner</h4>
+
+                <ul>
+                    <li><a href="https://dart.dev/">Dart</a></li>
+                    <li><a href="https://go.dev/">Go</a></li>
+                    <li><a href="https://vuejs.org/">Vue</a></li>
                 </ul>
             </section>
         </article>
