@@ -129,9 +129,28 @@
                     return this;
                 }
 
+                rotate(angle) {
+                    const { x, y } = this;
+
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+
+                    this.x = x * cos - y * sin;
+                    this.y = x * sin + y * cos;
+
+                    return this;
+                }
+
+                isNonZero() {
+                    return Math.abs(this.x) > 0.01
+                        || Math.abs(this.y) > 0.01;
+                }
+
                 negate() {
                     this.x = -this.x;
                     this.y = -this.y;
+
+                    return this;
                 }
 
                 add(rhs, into) {
@@ -234,10 +253,10 @@
             const T_NORMAL = Vec2.negativeY();
 
             // Avoid some garbage collection by allocating once outside the loop.
-            const velocity = Vec2.zero();
-            const para     = Vec2.zero();
-            const perp     = Vec2.zero();
-            const dist     = Vec2.zero();
+            const velo = Vec2.zero();
+            const para = Vec2.zero();
+            const perp = Vec2.zero();
+            const dist = Vec2.zero();
 
             let spawnTimer = 0;
             let activating = true;
@@ -246,46 +265,68 @@
                 const balls = new Array(BALL_COLOURS.length);
 
                 for (let i = 0; i < BALL_COLOURS.length; i += 1) {
-                    const ball = {
-                        position:     new Vec2(canvas.width >> 1, canvas.height >> 1),
-                        radius:       randomRange(25, 50),
-                        speed:        0.3,
-                        direction:    Vec2.randomUnit(),
-                        colour:       BALL_COLOURS[i],
-                        intersecting: false,
-                    };
+                    const radius    = randomRange(25, 50);
+                    const mass      = Math.PI * radius * radius * 0.0001;
+                    const velocity  = Vec2.randomUnit();
+                    const speed     = 0.3;
+                    const position  = new Vec2(canvas.width >> 1, canvas.height >> 1);
+                    const colour    = BALL_COLOURS[i];
 
-                    balls[i] = ball;
+                    velocity.mulAssign(speed);
+
+                    balls[i] = { position, colour, mass, radius, velocity };
                 }
 
                 return balls;
             }
 
-
-            // function respawnIfOffscreen(balls, canvas) {
-            //     for (let i = 0; i < balls.length; i += 1) {
-            //         const { position, radius } = balls[i];
-            //         const { x, y }             = position;
-            //         const { width, height }    = canvas;
-
-            //         if (
-            //                x + radius < 0
-            //             || y - radius < 0
-            //             || x - radius > width
-            //             || y + radius > height
-            //         ) {
-            //             position.x = randomRange(radius, width  - radius);
-            //             position.y = randomRange(radius, height - radius);
-            //         }
-            //     }
-            // }
-
-            function updateBallPositions(balls, delta) {
+            function respawnIfOffscreen(balls, canvas) {
                 for (let i = 0; i < balls.length; i += 1) {
-                    const ball = balls[i];
+                    const { position, radius } = balls[i];
+                    const { x, y }             = position;
+                    const { width, height }    = canvas;
 
-                    ball.direction.mul(delta * ball.speed, velocity);
-                    ball.position.addAssign(velocity);
+                    if (
+                            Number.isNaN(x)
+                        ||  Number.isNaN(y)
+                        || !Number.isFinite(x)
+                        || !Number.isFinite(y)
+
+                        || x + radius < 0
+                        || y - radius < 0
+                        || x - radius > width
+                        || y + radius > height
+                    ) {
+                        position.x = randomRange(radius, width  - radius);
+                        position.y = randomRange(radius, height - radius);
+                    }
+                }
+            }
+
+            function updateBallPositions(balls, mouse, textL, textR, delta) {
+                for (let i = 0; i < balls.length; i += 1) {
+                    const { position, velocity, radius, mass } = balls[i];
+
+                    position.sub(mouse, dist);
+
+                    const distance = dist.magnitudeSquared();
+                    const radiusSq = Math.pow(radius, 2);
+
+                    if (distance <= radiusSq) {
+                        velocity.addAssign(dist.mulAssign(0.01));
+                    }
+
+                    velocity.mul(delta, velo);
+                    position.addAssign(velo);
+
+                    if (velocity.isNonZero() && (position.x < textL || position.x > textR)) {
+                        dist.x = velocity.x;
+                        dist.y = velocity.y;
+
+                        dist.normalise().mulAssign(mass * 0.01);
+
+                        velocity.subAssign(dist);
+                    }
                 }
             }
 
@@ -293,7 +334,7 @@
                 for (let i = 0; i < balls.length; i += 1) {
                     const ball = balls[i];
 
-                    const { position, direction, radius } = ball;
+                    const { position, velocity, radius } = ball;
                     const { width, height }               = canvas
 
                     let reflectionNormal;
@@ -305,84 +346,58 @@
                     else { /* Don't have to do anything here. */ }
 
                     if (reflectionNormal) {
-                        direction.negate();
+                        velocity.negate();
 
-                        const scalar = direction.dot(reflectionNormal);
+                        const scalar = velocity.dot(reflectionNormal);
 
                         reflectionNormal.mul(scalar, para);
-                        direction       .sub(para,   perp);
-                        para            .sub(perp,   direction);
+                        velocity        .sub(para,   perp);
+                        para            .sub(perp,   velocity);
                     }
                 }
             }
 
-            function bounceOffOtherBalls(balls) {
+            function renderBallPaths(context, balls, textL, textR) {
                 for (let i = 0; i < balls.length; i += 1) {
-                    const b1 = balls[i];
-                    let   b2;
+                    const { position, colour, radius } = balls[i];
 
-                    for (
-                        let j = i + 1;
-                        j < balls.length && !b2;
-                        j += 1
-                    ) {
-                        const bj = balls[j];
+                    const lPoint = position.x - radius;
+                    const rPoint = position.x + radius;
 
-                        const distance = Math.hypot(
-                            b1.position.x - bj.position.x,
-                            b1.position.y - bj.position.y,
+                    if (lPoint <= textL || rPoint >= textR) {
+                        context.fillStyle = colour;
+                        context.beginPath();
+                        context.arc(
+                            Math.floor(position.x),
+                            Math.floor(position.y),
+                            radius,
+                            0,
+                            2 * Math.PI,
                         );
-
-                        if (distance <= b1.radius + bj.radius) {
-                            b2 = bj;
-                        }
-                    }
-
-                    if (b2) {
-                        if (!b1.intersecting) {
-                            b1.intersecting = true;
-
-                            const temp   = b2.direction;
-                            b2.direction = b1.direction;
-                            b1.direction = temp;
-                        }
-                    } else {
-                        b1.intersecting = false;
+                        context.fill();
                     }
                 }
             }
 
-            function renderBallPaths(context, balls) {
+            function renderBallShells(context, balls, textL, textR) {
                 for (let i = 0; i < balls.length; i += 1) {
                     const { position, colour, radius } = balls[i];
 
-                    context.fillStyle = colour;
-                    context.beginPath();
-                    context.arc(
-                        Math.floor(position.x),
-                        Math.floor(position.y),
-                        radius,
-                        0,
-                        2 * Math.PI,
-                    );
-                    context.fill();
-                }
-            }
+                    const lPoint = position.x - radius;
+                    const rPoint = position.x + radius;
 
-            function renderBallShells(context, balls) {
-                for (let i = 0; i < balls.length; i += 1) {
-                    const { position, colour, radius } = balls[i];
-
-                    context.strokeStyle = colour;
-                    context.beginPath();
-                    context.arc(
-                        Math.floor(position.x),
-                        Math.floor(position.y),
-                        radius,
-                        0,
-                        2 * Math.PI,
-                    );
-                    context.stroke();
+                    if (rPoint >= textL && lPoint <= textR) {
+                        context.strokeStyle = colour;
+                        context.beginPath();
+                        context.arc(
+                            Math.floor(position.x),
+                            Math.floor(position.y),
+                            radius,
+                            0,
+                            2 * Math.PI,
+                        );
+                        context.stroke();
+                    }
                 }
             }
 
@@ -396,6 +411,7 @@
 
                 let {
                     left:  textL,
+                    right: textR,
                     width: textW,
                 } = name.getClientRects()[0];
 
@@ -412,16 +428,20 @@
 
                     ({
                         left:  textL,
+                        right: textR,
                         width: textW,
                     } = name.getClientRects()[0]);
 
                     textW += textWExtraBit;
                 }, 150);
 
-                window.addEventListener("resize", debouncedSetCanvasSize);
+                const mouse = Vec2.zero();
 
-                // TODO:
-                // Apply velocity to balls when scrolling
+                window.addEventListener("resize", debouncedSetCanvasSize);
+                window.addEventListener("mousemove", (event) => {
+                    mouse.x = event.clientX;
+                    mouse.y = event.clientY;
+                });
 
                 let balls = spawnBalls(canvas);
 
@@ -438,14 +458,14 @@
                     context.clearRect(0, 0, canvas.width, canvas.height);
 
                     // Update the balls position and handle any collisions
-                    updateBallPositions(balls, delta);
+                    updateBallPositions(balls, mouse, textL, textR, delta);
                     reflectOffScreenEdges(balls, canvas);
-                    bounceOffOtherBalls(balls);
+                    respawnIfOffscreen(balls, canvas);
 
                     // Render the balls in their new positions.
-                    renderBallPaths(context, balls);
+                    renderBallPaths(context, balls, textL, textR);
                     context.clearRect(textL, 0, textW, canvas.height);
-                    renderBallShells(context, balls)
+                    renderBallShells(context, balls, textL, textR);
 
                     // Request next frame
                     requestAnimationFrame(frame);
@@ -462,6 +482,11 @@
         <canvas id=background-canvas></canvas>
 
         <h1 id=name>Hector Maddock-Greene</h1>
+
+        <p>
+            <a href="https://www.linkedin.com/in/hector-maddock-greene-14a8a3234/">LinkedIn</a>
+            <a href="https://github.com/rope-hmg">GitHub</a>
+        </p>
 
         <p>
             Highly experienced Typescript and Rust developer.
@@ -495,7 +520,7 @@
                     <li>Managing the graduate scheme</li>
                     <li>Managing the webpack build system</li>
                     <li>Interviewing candidates</li>
-                    <li>Handling deployments </li>
+                    <li>Handling deployments</li>
                     <li>Working on the US conversion project</li>
                     <li>Business Improvements team lead</li>
                 </ul>
