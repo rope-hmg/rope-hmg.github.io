@@ -7,18 +7,18 @@
 
         <style>
             :root {
-                --h1-colour: #978E7F;
-                --h2-colour: #B49B73;
-                --bg-colour: #F4F4F4;
+                --h1-colour:   #978E7F;
+                --h2-colour:   #B49B73;
+                --bg-colour:   #F4F4F4;
                 --font-colour: #2D2620;
                 --link-colour: #AFA597;
             }
 
             @media (prefers-color-scheme: dark) {
                 :root {
-                    --h1-colour: #978E7F;
-                    --h2-colour: #B49B73;
-                    --bg-colour: #2D2620;
+                    --h1-colour:   #978E7F;
+                    --h2-colour:   #B49B73;
+                    --bg-colour:   #2D2620;
                     --font-colour: #F4F4F4;
                     --link-colour: #AFA597;
                 }
@@ -28,13 +28,12 @@
                 display: grid;
                 justify-content: center;
 
-                min-width: 368px;
-                margin: 0;
-                background: var(--bg-colour);
-                color:  var(--font-colour);
+                min-width:   368px;
+                margin:      0;
+                background:  var(--bg-colour);
+                color:       var(--font-colour);
                 font-family: Arial, Helvetica, sans-serif;
-                overflow-x: hidden;
-
+                overflow-x:  hidden;
             }
 
             h1 {
@@ -83,157 +82,9 @@
             }
         </style>
 
-        <script type="text/javascript">
-            class Vec2 {
-                static zero() {
-                    return new Vec2(0, 0);
-                }
-
-                static positiveX() { return new Vec2( 1,  0); }
-                static negativeX() { return new Vec2(-1,  0); }
-                static positiveY() { return new Vec2( 0,  1); }
-                static negativeY() { return new Vec2( 0, -1); }
-
-                static randomUnit() {
-                    const x = randomRange(-1, 1);
-                    const y = randomRange(-1, 1);
-                    const v = new Vec2(x, y);
-
-                    return v.normalise();
-                }
-
-                constructor(x, y) {
-                    this.x = x;
-                    this.y = y;
-                }
-
-                dot(rhs) {
-                    return this.x * rhs.x
-                         + this.y * rhs.y;
-                }
-
-                magnitudeSquared() {
-                    return this.dot(this);
-                }
-
-                magnitude() {
-                    return Math.sqrt(this.magnitudeSquared());
-                }
-
-                normalise() {
-                    const recip = 1 / this.magnitude();
-
-                    this.x *= recip;
-                    this.y *= recip;
-
-                    return this;
-                }
-
-                rotate(angle) {
-                    const { x, y } = this;
-
-                    const cos = Math.cos(angle);
-                    const sin = Math.sin(angle);
-
-                    this.x = x * cos - y * sin;
-                    this.y = x * sin + y * cos;
-
-                    return this;
-                }
-
-                isNonZero() {
-                    return Math.abs(this.x) > 0.01
-                        || Math.abs(this.y) > 0.01;
-                }
-
-                negate() {
-                    this.x = -this.x;
-                    this.y = -this.y;
-
-                    return this;
-                }
-
-                add(rhs, into) {
-                    into = into || Vec2.zero();
-
-                    into.x = this.x + rhs.x;
-                    into.y = this.y + rhs.y;
-
-                    return into;
-                }
-
-                addAssign(rhs) {
-                    this.x += rhs.x;
-                    this.y += rhs.y;
-
-                    return this;
-                }
-
-                sub(rhs, into) {
-                    into = into || Vec2.zero();
-
-                    into.x = this.x - rhs.x;
-                    into.y = this.y - rhs.y;
-
-                    return into;
-                }
-
-                subAssign(rhs) {
-                    this.x -= rhs.x;
-                    this.y -= rhs.y;
-
-                    return this;
-                }
-
-                mul(rhs, into) {
-                    into = into || Vec2.zero();
-
-                    into.x = this.x * rhs;
-                    into.y = this.y * rhs;
-
-                    return into;
-                }
-
-                mulAssign(rhs) {
-                    this.x *= rhs;
-                    this.y *= rhs;
-
-                    return this;
-                }
-
-                div(rhs, into) {
-                    return this.mul(1 / rhs, into);
-                }
-
-                divAssign(rhs) {
-                    return this.mulAssign(1 / rhs);
-                }
-            }
-
-            function debounce(fn, ms) {
-                let handle;
-
-                return (...args) => {
-                    clearTimeout(handle);
-                    handle = setTimeout(() => fn(...args), ms);
-                };
-            }
-
-            function randomRange(min, max) {
-                return Math.random() * (max - min) + min;
-            }
-
-            function shuffle(items) {
-                for (let i = 0; i < items.length; i += 1) {
-                    const j = randomRange(0, items.length - 1) | 0;
-
-                    const temp = items[i];
-                    items[i]   = items[j];
-                    items[j]   = temp;
-                }
-
-                return items;
-            }
+        <script type="module">
+            import { Vec2 } from './modules/Vec2.js';
+            import { debounce, randomRange, shuffle } from './modules/Utils.js';
 
             const BALL_COLOURS = shuffle([
                 "#673CFA", // Purple
@@ -407,7 +258,7 @@
                 const context = canvas.getContext("2d", { alpha: false });
 
                 canvas.width  = window.innerWidth;
-                canvas.height = window.innerHeight;;
+                canvas.height = window.innerHeight;
 
                 let {
                     left:  textL,
@@ -486,6 +337,10 @@
         <p>
             <a href="https://www.linkedin.com/in/hector-maddock-greene-14a8a3234/">LinkedIn</a>
             <a href="https://github.com/rope-hmg">GitHub</a>
+        </p>
+
+        <p>
+            <a href="./snake.html">Snake</a>
         </p>
 
         <p>

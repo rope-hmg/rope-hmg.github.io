@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Colourful Danger Noodle</title>
+
+        <style type="text/css">
+            html, body {
+                margin:     0;
+                background: black;
+                color:      white;
+            }
+
+            #wow-canvas {
+                position: fixed;
+                z-index:  -1;
+                width:    100%;
+                height:   100%;
+            }
+        </style>
+
+        <script type="module">
+            import { Vec2 } from "./modules/Vec2.js";
+
+            class Point {
+                constructor(position, colour) {
+                    this.position = position;
+                    this.colour   = colour;
+                }
+            }
+
+            class Snake {
+                constructor(w, h, target) {
+                    const halfW = w * 0.5;
+                    const halfH = h * 0.5;
+
+                    this.segments = [
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                        new Vec2(halfW, halfH), new Vec2(halfW, halfH),
+                    ];
+
+                    this.radius   = POINT_RADIUS;
+                    this.targetId = 0;
+                    this.pending  = false;
+                }
+            }
+
+            function randomRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            function debounce(ms, fn) {
+                let handle;
+
+                return (...args) => {
+                    clearTimeout(handle);
+                    handle = setTimeout(() => fn(...args), ms);
+                };
+            }
+
+            function shuffle(items) {
+                for (let i = 0; i < items.length; i += 1) {
+                    const j = randomRange(0, items.length - 1) | 0;
+
+                    const temp = items[i];
+                    items[i]   = items[j];
+                    items[j]   = temp;
+                }
+
+                return items;
+            }
+
+            const COLOURS = shuffle([
+                "#A0151E", "#22598E", "#DAFD9E", "#E9E173", "#0F5F6E", "#19EA88", "#C8AC8F", "#39C692",
+                "#B66C7A", "#41A388", "#E63BEC", "#5FAC53", "#7417FD", "#11699E", "#A2340F", "#AB23B9",
+                "#96C63B", "#0C6053", "#BB653A", "#A343F9", "#AEE8C9", "#F4AB63", "#E587F2", "#118DCB",
+                "#F85F0A", "#F5A166", "#566A8A", "#82599B", "#DE0E25", "#D90FF2", "#3437A7", "#C52724",
+            ]);
+
+            const MAX_POINTS     = 32;
+            const MIN_POINTS     = 3;
+            const MOVEMENT_SPEED = 0.2;
+            const POINT_RADIUS   = 20;
+            const MOUSE_RADIUS   = 50;
+
+            function setPointPositions(points, pointCount, w, h) {
+                let   angle     = 0;
+                const angleStep = (Math.PI * 2) / pointCount;
+                const x         = Math.min(w / 2.2, h / 2.2);
+                const halfW     = w * 0.5;
+                const halfH     = h * 0.5;
+
+                for (let i = 0; i < pointCount; i += 1) {
+                    const point = points[i];
+
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+
+                    angle += angleStep;
+
+                    point.position.x = halfW + cos * x;
+                    point.position.y = halfH + sin * x;
+                }
+            }
+
+            function drawPoints(context, points, pointCount) {
+                const { canvas: { width: w, height: h } } = context;
+
+                context.clearRect(0, 0, w, h);
+
+                for (let i = 0; i < pointCount; i += 1) {
+                    const { position: { x, y }, colour } = points[i];
+
+                    context.fillStyle = colour;
+                    context.beginPath();
+                    context.arc(x, y, POINT_RADIUS, 0, 2 * Math.PI);
+                    context.fill();
+                }
+            }
+
+            const lastMovementDirection = Vec2.zero();
+            const dir                   = Vec2.zero();
+            const move                  = Vec2.zero();
+
+            function moveSegment(next, current, radius, delta) {
+                // Calculate direction vector
+                next.sub(current, dir);
+
+                // Normalise and scale by movement speed * delta
+                const dist  = dir.magnitude();
+                const recip = 1 / dist;
+
+                dir.mul(recip, move);
+                lastMovementDirection.copy(move);
+
+                move.mulAssign(MOVEMENT_SPEED);
+                move.mulAssign(delta);
+
+                // Move the segment of the snake
+                if (dist > radius) {
+                    current.addAssign(move);
+                }
+
+                return dist;
+            }
+
+            const diff = Vec2.zero();
+
+            function updateSnakePosition(snake, points, pointCount, delta) {
+                // TODO:
+                // 1. Snake should avoid the mouse?
+
+                const { segments, radius } = snake;
+
+                const segmentCount = segments.length;
+                const target       = points[snake.targetId];
+
+                // If the head has reached the point pick a new point
+                if (snake.pending || moveSegment(target.position, segments[0], radius, delta) < POINT_RADIUS) {
+                    snake.pending = true;
+
+                    // Avoid picking a target if the turn angle is too steep
+                    const nextTargetId = randomRange(0, pointCount) | 0;
+                    const nextTarget   = points[nextTargetId];
+
+                    nextTarget.position.sub(segments[0], diff);
+                    diff.normalise();
+
+                    const cos = lastMovementDirection.dot(diff);
+
+                    // Probably want to adjust what we consider steep depending on the point count.
+                    if (cos >= -0.9) {
+                        snake.pending  = false;
+                        snake.targetId = nextTargetId;
+                    }
+                }
+
+                // Move the rest of the snake
+                for (let i = 1, j = 0; i < segmentCount; j = i, i += 1) {
+                    moveSegment(segments[j], segments[i], radius, delta);
+                }
+            }
+
+            function drawSnake(context, points, snake) {
+                const { segments, targetId } = snake;
+
+                const segmentCount = segments.length;
+                const head         = segments[0];
+
+                context.strokeStyle = points[targetId].colour;
+                context.lineWidth   = 7;
+                context.beginPath();
+                context.moveTo(head.x, head.y);
+
+                for (let i = 1; i < segmentCount; i += 1) {
+                    const { x, y } = segments[i];
+
+                    context.lineTo(x, y);
+                }
+
+                context.stroke();
+            }
+
+            // function drawMouse(context, mouse) {
+            //     context.beginPath();
+            //     context.arc(mouse.x, mouse.y, MOUSE_RADIUS, 0, 2 * Math.PI);
+            //     context.stroke();
+            // }
+
+            function main() {
+                const canvas      = document.getElementById("wow-canvas");
+                const inc         = document.getElementById("increase");
+                const dec         = document.getElementById("decrease");
+                const totalPoints = document.getElementById("point-count");
+                const context     = canvas.getContext("2d");
+
+                canvas.width  = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                const points = new Array(MAX_POINTS);
+                const snake  = new Snake(canvas.width, canvas.height);
+
+                for (let i = 0; i < MAX_POINTS; i += 1) {
+                    points[i] = new Point(
+                        Vec2.zero(),
+                        COLOURS[i],
+                    );
+                }
+
+                let pointCount = MIN_POINTS;
+
+                window.addEventListener("resize", debounce(150, () => {
+                    canvas.width  = window.innerWidth;
+                    canvas.height = window.innerHeight;
+
+                    setPointPositions(points, pointCount, canvas.width, canvas.height);
+                }));
+
+                setPointPositions(points, pointCount, canvas.width, canvas.height);
+
+                totalPoints.innerText = `${pointCount}`;
+
+                inc.addEventListener("click", () => {
+                    pointCount = Math.min(pointCount + 1, MAX_POINTS);
+                    totalPoints.innerText = `${pointCount}`;
+                    setPointPositions(points, pointCount, canvas.width, canvas.height);
+                });
+
+                dec.addEventListener("click", () => {
+                    pointCount = Math.max(pointCount - 1, MIN_POINTS);
+                    totalPoints.innerText = `${pointCount}`;
+                    setPointPositions(points, pointCount, canvas.width, canvas.height);
+                });
+
+                const mouse = Vec2.zero();
+
+                window.addEventListener("mousemove", (event) => {
+                    mouse.x = event.clientX;
+                    mouse.y = event.clientY;
+                });
+
+                let pTime;
+                let cTime = performance.now();
+                let delta;
+
+                function frame(time) {
+                    pTime = cTime;
+                    cTime = time;
+                    delta = cTime - pTime;
+
+                    updateSnakePosition(snake, points, pointCount, delta);
+
+                    drawPoints(context, points, pointCount);
+                    drawSnake(context, points, snake);
+                    // drawMouse(context, mouse);
+
+                    requestAnimationFrame(frame);
+                }
+
+                frame(performance.now());
+            }
+
+            window.addEventListener("DOMContentLoaded", main);
+        </script>
+    </head>
+
+    <body>
+        <canvas id=wow-canvas></canvas>
+
+        <section class=controls>
+            <a href="./index.html">Home</a>
+            Point Count <span id=point-count></span>
+            <button id=decrease>Decrease</button>
+            <button id=increase>Increase</button>
+        </section>
+    </body>
+</html>
