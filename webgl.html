@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Path Tracer</title>
+
+        <style type="text/css">
+            html, body {
+                margin:     0;
+                background: black;
+                color:      white;
+            }
+
+            #wow-canvas {
+                position: fixed;
+                z-index:  -1;
+                width:    100%;
+                height:   100%;
+            }
+        </style>
+
+        <script type="module">
+            function report(error) {
+                document.getElementById("error").textContent += error;
+            }
+
+            function createShader(context, shaderSource, shaderType) {
+                const shader = context.createShader(shaderType);
+                if (!shader) {
+                    report("Unable to create shader object");
+                    return;
+                }
+
+                context.shaderSource(shader, shaderSource);
+                context.compileShader(shader);
+
+                if (!context.getShaderParameter(shader, context.COMPILE_STATUS)) {
+                    report(`Shader compilation error: ${context.getShaderInfoLog(shader)}`);
+                    return;
+                }
+
+                return shader;
+            }
+
+            async function createProgram(context) {
+                const [vertSource, fragSource] = await Promise.all([
+                    fetch("/shaders/ray-tracer.vert").then((response) => response.text()),
+                    fetch("/shaders/ray-tracer.frag").then((response) => response.text()),
+                ]);
+
+                const program = context.createProgram();
+                const vertShader = createShader(context, vertSource, context.VERTEX_SHADER);
+                const fragShader = createShader(context, fragSource, context.FRAGMENT_SHADER);
+
+                if (program && vertShader && fragShader) {
+                    context.attachShader(program, vertShader);
+                    context.attachShader(program, fragShader);
+
+                    context.linkProgram(program);
+
+                    context.detachShader(program, vertShader);
+                    context.detachShader(program, fragShader);
+                }
+
+                context.deleteShader(vertShader);
+                context.deleteShader(fragShader);
+
+                if (!context.getProgramParameter(program, context.LINK_STATUS)) {
+                    report(`Program link error: ${context.getProgramInfoLog(program)}`);
+                    context.deleteProgram(program);
+                    return;
+                }
+
+                return program;
+            }
+
+            async function main() {
+                const canvas = document.getElementById("wow-canvas");
+
+                canvas.width = canvas.clientWidth;
+                canvas.height = canvas.clientHeight;
+
+                const context = canvas.getContext("webgl2");
+
+                if (!context) {
+                    report("Failed to get WebGL context");
+                    return;
+                }
+
+                const program = await createProgram(context);
+
+                if (program) {
+                    // Always enable vertex
+                    const vao = context.createVertexArray();
+                    context.bindVertexArray(vao);
+
+                    const vertices = new Float32Array([
+                        -0.95, -0.95,
+                         0.95, -0.95,
+                         0.95,  0.95,
+                        -0.95,  0.95,
+                    ]);
+
+                    const indices = new Uint8Array([
+                        0, 1, 2,
+                        0, 2, 3,
+                    ]);
+
+                    const balls = new Float32Array([
+                        // position           colour            radius
+                         0.0, 100.5, -1.0,    0.1, 0.2, 0.3,    100.0,
+                         0.0, 0.0,   -1.0,    0.9, 0.0, 0.0,    0.4,
+                         0.9, 0.0,   -1.0,    0.0, 0.9, 0.0,    0.4,
+                        -0.9, 0.0,   -1.0,    0.0, 0.0, 0.9,    0.4,
+                    ]);
+
+                    const vbo = context.createBuffer();
+                    context.bindBuffer(context.ARRAY_BUFFER, vbo);
+                    context.bufferData(context.ARRAY_BUFFER, vertices, context.STATIC_DRAW);
+
+                    const ibo = context.createBuffer();
+                    context.bindBuffer(context.ELEMENT_ARRAY_BUFFER, ibo);
+                    context.bufferData(context.ELEMENT_ARRAY_BUFFER, indices, context.STATIC_DRAW);
+
+                    const aPosition = context.getAttribLocation(program, "a_position");
+                    context.vertexAttribPointer(aPosition, 2, context.FLOAT, false, 0, 0);
+                    context.enableVertexAttribArray(aPosition);
+
+                    // const aBalls = context.getAttribLocation(program, "a_balls");
+                    // context.vertexAttribPointer(aBalls, 7, context.FLOAT, false, 0, 0);
+                    // context.enableVertexAttribArray(aBalls);
+
+                    context.viewport(0, 0, context.drawingBufferWidth, context.drawingBufferHeight);
+                    context.clearColor(0.1, 0.2, 0.3, 1.0);
+                    context.clear(context.COLOR_BUFFER_BIT );
+                    context.useProgram(program);
+                    context.drawElements(context.TRIANGLE_STRIP, indices.length, context.UNSIGNED_BYTE, 0);
+                }
+
+            }
+
+            window.addEventListener("DOMContentLoaded", main);
+        </script>
+    </head>
+
+    <body>
+        <canvas id=wow-canvas></canvas>
+
+        <section class=controls>
+            <a href="./index.html">Home</a>
+            <span>Work in Progress :)</span>
+            <span id=error></span>
+        </section>
+    </body>
+</html>
+

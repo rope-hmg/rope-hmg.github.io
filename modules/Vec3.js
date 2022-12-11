@@ -1,31 +1,36 @@
 import { randomRange } from './Utils.js';
 
-export class Vec2 {
+export class Vec3 {
     static zero() {
-        return new Vec2(0, 0);
+        return new Vec3(0, 0, 0);
     }
 
-    static positiveX() { return new Vec2(1, 0); }
-    static negativeX() { return new Vec2(-1, 0); }
-    static positiveY() { return new Vec2(0, 1); }
-    static negativeY() { return new Vec2(0, -1); }
+    static positiveX() { return new Vec3(1, 0, 0); }
+    static negativeX() { return new Vec3(-1, 0, 0); }
+    static positiveY() { return new Vec3(0, 1, 0); }
+    static negativeY() { return new Vec3(0, -1, 0); }
+    static positiveY() { return new Vec3(0, 0, 1); }
+    static negativeY() { return new Vec3(0, 0, -1); }
 
     static randomUnit() {
         const x = randomRange(-1, 1);
         const y = randomRange(-1, 1);
-        const v = new Vec2(x, y);
+        const z = randomRange(-1, 1);
+        const v = new Vec3(x, y, z);
 
         return v.normalise();
     }
 
-    constructor(x, y) {
+    constructor(x, y, z) {
         this.x = x;
         this.y = y;
+        this.z = z;
     }
 
     dot(rhs) {
         return this.x * rhs.x
-            + this.y * rhs.y;
+            + this.y * rhs.y
+            + this.z * rhs.z;
     }
 
     magnitudeSquared() {
@@ -33,7 +38,7 @@ export class Vec2 {
     }
 
     magnitude() {
-        return Math.hypot(this.x, this.y);
+        return Math.hypot(this.x, this.y, this.z);
     }
 
     normalise() {
@@ -41,39 +46,31 @@ export class Vec2 {
 
         this.x *= recip;
         this.y *= recip;
-
-        return this;
-    }
-
-    rotate(angle) {
-        const { x, y } = this;
-
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-
-        this.x = x * cos - y * sin;
-        this.y = x * sin + y * cos;
+        this.z *= recip;
 
         return this;
     }
 
     isNonZero() {
         return Math.abs(this.x) > 0.01
-            || Math.abs(this.y) > 0.01;
+            || Math.abs(this.y) > 0.01
+            || Math.abs(this.z) > 0.01;
     }
 
     negate() {
         this.x = -this.x;
         this.y = -this.y;
+        this.z = -this.z;
 
         return this;
     }
 
     add(rhs, into) {
-        into = into || Vec2.zero();
+        into = into || Vec3.zero();
 
         into.x = this.x + rhs.x;
         into.y = this.y + rhs.y;
+        into.z = this.z + rhs.z;
 
         return into;
     }
@@ -81,15 +78,17 @@ export class Vec2 {
     addAssign(rhs) {
         this.x += rhs.x;
         this.y += rhs.y;
+        this.z += rhs.z;
 
         return this;
     }
 
     sub(rhs, into) {
-        into = into || Vec2.zero();
+        into = into || Vec3.zero();
 
         into.x = this.x - rhs.x;
         into.y = this.y - rhs.y;
+        into.z = this.z - rhs.z;
 
         return into;
     }
@@ -97,15 +96,17 @@ export class Vec2 {
     subAssign(rhs) {
         this.x -= rhs.x;
         this.y -= rhs.y;
+        this.z -= rhs.z;
 
         return this;
     }
 
     mul(rhs, into) {
-        into = into || Vec2.zero();
+        into = into || Vec3.zero();
 
         into.x = this.x * rhs;
         into.y = this.y * rhs;
+        into.z = this.z * rhs;
 
         return into;
     }
@@ -113,6 +114,7 @@ export class Vec2 {
     mulAssign(rhs) {
         this.x *= rhs;
         this.y *= rhs;
+        this.z *= rhs;
 
         return this;
     }
@@ -128,5 +130,6 @@ export class Vec2 {
     copyFrom(rhs) {
         this.x = rhs.x;
         this.y = rhs.y;
+        this.z = rhs.z;
     }
 }
