@@ -255,7 +255,7 @@
             function main() {
                 const name    = document.getElementById("name");
                 const canvas  = document.getElementById("background-canvas");
-                const context = canvas.getContext("2d", { alpha: false });
+                const context = canvas.getContext("2d");
 
                 canvas.width  = window.innerWidth;
                 canvas.height = window.innerHeight;
@@ -341,6 +341,7 @@
 
         <p>
             <a href="./snake.html">Snake</a>
+            <a href="./webgl.html">Path Tracer</a>
         </p>
 
         <p>
@@ -366,8 +367,10 @@
                     <li>High level visioning with stake holders</li>
                     <li>Replaced HTML5 canvas renderer with WebGL</li>
                     <li>Implemented a typesafe ECS system in Typescript</li>
-                    <li>Transitioned the application from an event driven architecture to a loop based architecture</li>
+                    <li>Transitioned the application from an event driven architecture to an on-demand loop based architecture</li>
                     <li>Implemented spatial partitioning to improve collision detection performance</li>
+                    <li>Implemented high performance, lockless, multi-threaded job system using WebWorkers SharedArrayBuffers</li>
+                    <li>Implemented a path finding system to generate procedural walk around videos for customer kitchens</li>
                 </ul>
 
                 <h4>Intermediate Developer</h4>  2019 - 2020
@@ -455,6 +458,7 @@
                 <ul>
                     <li><a href="https://www.typescriptlang.org/">Typescript</a></li>
                     <li><a href="https://www.ecma-international.org/publications-and-standards/standards/ecma-262/">JavaScript</a></li>
+                    <li><a href="https://www.rust-lang.org/">Rust</a></li>
                 </ul>
             </section>
 
@@ -462,10 +466,10 @@
                 <h4>Intermediate</h4>
 
                 <ul>
-                    <li><a href="https://www.rust-lang.org/">Rust</a></li>
-                    <li><a href="https://en.wikipedia.org/wiki/C_(programming_language)">C</a></li>
+                    <li><a href="https://www.solidjs.com/">SolidJS</a></li>
                     <li><a href="https://reactjs.org/">React</a></li>
                     <li><a href="https://angular.io/">Angular</a></li>
+                    <li><a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a></li>
                     <li><a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data">SIMD</a></li>
                     <li><a href="https://en.wikipedia.org/wiki/Multithreading_(computer_architecture)">Multithreaded Programming</a></li>
 
@@ -476,6 +480,7 @@
                 <h4>Beginner</h4>
 
                 <ul>
+                    <li><a href="https://en.wikipedia.org/wiki/C_(programming_language)">C</a></li>
                     <li><a href="https://dart.dev/">Dart</a></li>
                     <li><a href="https://go.dev/">Go</a></li>
                     <li><a href="https://vuejs.org/">Vue</a></li>
