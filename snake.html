@@ -23,6 +23,11 @@
 
         <script type="module">
             import { Vec2 } from "./modules/Vec2.js";
+            import {
+                debounce,
+                randomRange,
+                shuffle,
+            } from "./modules/Utils.js";
 
             class Point {
                 constructor(position, colour) {
@@ -53,31 +58,6 @@
                     this.targetId = 0;
                     this.pending  = false;
                 }
-            }
-
-            function randomRange(min, max) {
-                return Math.random() * (max - min) + min;
-            }
-
-            function debounce(ms, fn) {
-                let handle;
-
-                return (...args) => {
-                    clearTimeout(handle);
-                    handle = setTimeout(() => fn(...args), ms);
-                };
-            }
-
-            function shuffle(items) {
-                for (let i = 0; i < items.length; i += 1) {
-                    const j = randomRange(0, items.length - 1) | 0;
-
-                    const temp = items[i];
-                    items[i]   = items[j];
-                    items[j]   = temp;
-                }
-
-                return items;
             }
 
             const COLOURS = shuffle([
@@ -141,7 +121,7 @@
                 const recip = 1 / dist;
 
                 dir.mul(recip, move);
-                lastMovementDirection.copy(move);
+                lastMovementDirection.copyFrom(move);
 
                 move.mulAssign(MOVEMENT_SPEED);
                 move.mulAssign(delta);
