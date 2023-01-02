@@ -126,43 +126,6 @@
                 return newValue;
             }
 
-            const moveRightSearchRowCondition  = (index)       => index > 0;
-            const moveRightSearchFromCondition = (x)           => x >= 0;
-            const moveRightSearchFromIncrement = (x)           => x - 1;
-            const moveRightNextCell            = (currentCell) => currentCell - 1;
-
-            const moveLeftSearchRowCondition  = (index, gridSize) => index < gridSize - 1;
-            const moveLeftSearchFromCondition = (x,     gridSize) => x < gridSize;
-            const moveLeftSearchFromIncrement = (x)               => x + 1;
-            const moveLeftNextCell            = (currentCell)     => currentCell + 1;
-
-            // Shh, saving some allocations.
-            const searchFromResults = [undefined, false];
-            function searchFrom(startIndex, gridSize, condition, increment, getCell) {
-                searchFromResults[0] = undefined;
-                searchFromResults[1] = false;
-
-                // Search left until found something
-                for (
-                    let x = startIndex;
-                    condition(x, gridSize) && searchFromResults[0] === undefined;
-                    x = increment(x)
-                ) {
-                    const cell = getCell(x);
-
-                    if (cell === OBSTACLE) {
-                        searchFromResults[0] = x;
-                        searchFromResults[1] = true;
-                    }
-
-                    if (cell !== EMPTY) {
-                        searchFromResults[0] = x;
-                    }
-                }
-
-                return searchFromResults;
-            }
-
             class CanvasController {
                 constructor() {
                     this.canvas = [
@@ -370,31 +333,97 @@
                     this.cells[x + y * this.gridSize] = value;
                 }
 
+                movePositiveSearchFromCondition = (x) => x < this.gridSize;
+                moveNegativeSearchFromCondition = (x) => x >= 0;
+
+                // Shh, saving some allocations.
+                searchFromResults = [undefined, false];
+                searchFrom(startIndex, condition, increment, getCell) {
+                    const { searchFromResults } = this;
+
+                    searchFromResults[0] = undefined;
+                    searchFromResults[1] = false;
+
+                    for (
+                        let x = startIndex;
+                        condition(x) && searchFromResults[0] === undefined;
+                        x = x + increment
+                    ) {
+                        const cell = getCell(x);
+
+                        if (cell === OBSTACLE) {
+                            searchFromResults[0] = x;
+                            searchFromResults[1] = true;
+                        }
+
+                        if (cell !== EMPTY) {
+                            searchFromResults[0] = x;
+                        }
+                    }
+
+                    return searchFromResults;
+                }
+
+                movePositiveSearchCondition = (index) => index < this.gridSize - 1;
+                moveNegativeSearchCondition = (index) => index > 0;
+
+                /**
+                 * The core update algorithm. This will handle a row or column at a time.
+                 *
+                 * The step are as follows:
+                 * 1.  Start at the end of the row or column based on input direction (e.g. if the user pressed left we'd start at index 0)
+                 * 2.  Search the row or column for the first cell with a value.
+                 * 3.  If nothing was found
+                 *       a.  There is nothing in the row or column and we can break.
+                 * 4.  If an obstacle was found
+                 *       a.  Set the start index to the cell after the obstacle
+                 *       b.  Goto 1.
+                 * 5.  If the cell should move (it may have already been at the end)
+                 *       a.  Set the start cell to the value
+                 *       b.  Set the found cell to empty
+                 * 6.  Search again from the cell after the found cell
+                 * 7.  If nothing was found
+                 *       a.  There is nothing in the row or column and we can break.
+                 * 8.  If an obstacle was found
+                 *       a.  Set the start index to the cell after the obstacle
+                 *       b.  Goto 1.
+                 * 9.  If the second and first cells have the same value
+                 *       a.  Compute the combined value and insert into start cell
+                 *       b.  If the computed value is 2048
+                 *             a. Set the game state to WIN
+                 * 10. If the cell should move (it may have already been next to the end)
+                 *       a.  Set the cell next to the start cell to the value
+                 *       b.  Set the found cell to empty
+                 * 11. Increment the start index
+                 * 12. Goto 1.
+                 *
+                 * @param startIndex          The starting index within the row or column.
+                 * @param searchCondition     A function to determine if we need to continue working in this row or column
+                 * @param searchFromCondition The condition used for searching the row or column for cells
+                 * @param increment           The increment used to move to the next cell
+                 * @param getCell             A function for getting a cell given a single coordinate
+                 * @param setCell             A function for setting a cell given a single coordinate
+                 */
                 updateCells(
                     startIndex,
                     searchCondition,
                     searchFromCondition,
-                    searchFromIncrement,
+                    increment,
                     getCell,
                     setCell,
-                    nextCell,
                 ) {
-                    const { gridSize } = this;
-
-                    while (searchCondition(startIndex, gridSize)) {
-                        // search until found something
-                        const [firstIndex, firstObstacle] = searchFrom(startIndex, gridSize, searchFromCondition, searchFromIncrement, getCell);
+                    while (searchCondition(startIndex)) {
+                        const [firstIndex, firstObstacle] = this.searchFrom(startIndex, searchFromCondition, increment, getCell);
 
                         if (firstIndex === undefined) {
                             break;
                         }
 
                         if (firstObstacle) {
-                            startIndex = nextCell(firstIndex);
+                            startIndex = firstIndex + increment;
                             continue;
                         }
 
-                        // if found something move to start
                         const firstCell       = getCell(firstIndex);
                         const firstShouldMove = firstIndex !== startIndex;
 
@@ -404,16 +433,15 @@
                             setCell(firstIndex, EMPTY);
                         }
 
-                        // search again until found something
-                        const secondStart = nextCell(firstIndex);
-                        const [secondIndex, secondObstacle] = searchFrom(secondStart, gridSize, searchFromCondition, searchFromIncrement, getCell);
+                        const secondStart = firstIndex + increment;
+                        const [secondIndex, secondObstacle] = this.searchFrom(secondStart, searchFromCondition, increment, getCell);
 
                         if (secondIndex === undefined) {
                             break;
                         }
 
                         if (secondObstacle) {
-                            startIndex = nextCell(secondIndex);
+                            startIndex = secondIndex + increment;
                             continue;
                         }
 
@@ -424,7 +452,7 @@
                             const combined = firstCell + secondCell;
 
                             if (combined === 2048) {
-                                gameState.state = WIN;
+                                this.state = WIN;
                             }
 
                             this.anythingMoved = true;
@@ -435,22 +463,21 @@
 
                             if (secondShouldMove) {
                                 this.anythingMoved = true;
-                                setCell(nextCell(startIndex), secondCell);
-                                setCell(secondIndex,          EMPTY);
+                                setCell(startIndex + increment, secondCell);
+                                setCell(secondIndex,            EMPTY);
                             }
                         }
 
                         // move to next cell repeat
-                        startIndex = nextCell(startIndex);
+                        startIndex = startIndex + increment;
                     }
                 }
 
-                updateCellsLeftRight(
+                updateRows(
                     startIndex,
-                    searchRowCondition,
+                    searchCondition,
                     searchFromCondition,
-                    searchFromIncrement,
-                    nextCell,
+                    increment,
                 ) {
                     const { gridSize } = this;
 
@@ -460,22 +487,20 @@
 
                         this.updateCells(
                             startIndex,
-                            searchRowCondition,
+                            searchCondition,
                             searchFromCondition,
-                            searchFromIncrement,
+                            increment,
                             getCell,
                             setCell,
-                            nextCell,
                         );
                     }
                 }
 
-                updateCellsUpDown(
+                updateColumns(
                     startIndex,
-                    searchColumnCondition,
+                    searchCondition,
                     searchFromCondition,
-                    searchFromIncrement,
-                    nextCell,
+                    increment,
                 ) {
                     const { gridSize } = this;
 
@@ -485,16 +510,21 @@
 
                         this.updateCells(
                             startIndex,
-                            searchColumnCondition,
+                            searchCondition,
                             searchFromCondition,
-                            searchFromIncrement,
+                            increment,
                             getCell,
                             setCell,
-                            nextCell,
                         );
                     }
                 }
 
+                /**
+                 * Checks to see if there are any valid moves available on the board
+                 *
+                 * It is valid to move if a cell contains a value and either up, down, left or right of it is empty or a
+                 * cell containing the same value.
+                 */
                 movesAvailable() {
                     let canContinue = false;
 
@@ -534,42 +564,38 @@
 
                     switch (keyCode) {
                         case LEFT:
-                            this.updateCellsLeftRight(
+                            this.updateRows(
                                 0,
-                                moveLeftSearchRowCondition,
-                                moveLeftSearchFromCondition,
-                                moveLeftSearchFromIncrement,
-                                moveLeftNextCell,
+                                this.movePositiveSearchCondition,
+                                this.movePositiveSearchFromCondition,
+                                1,
                             );
                             break;
 
                         case UP:
-                            this.updateCellsUpDown(
+                            this.updateColumns(
                                 0,
-                                moveLeftSearchRowCondition,
-                                moveLeftSearchFromCondition,
-                                moveLeftSearchFromIncrement,
-                                moveLeftNextCell,
+                                this.movePositiveSearchCondition,
+                                this.movePositiveSearchFromCondition,
+                                1,
                             );
                             break;
 
                         case RIGHT:
-                            this.updateCellsLeftRight(
+                            this.updateRows(
                                 this.gridSize - 1,
-                                moveRightSearchRowCondition,
-                                moveRightSearchFromCondition,
-                                moveRightSearchFromIncrement,
-                                moveRightNextCell,
+                                this.moveNegativeSearchCondition,
+                                this.moveNegativeSearchFromCondition,
+                                -1,
                             );
                             break;
 
                         case DOWN:
-                            this.updateCellsUpDown(
+                            this.updateColumns(
                                 this.gridSize - 1,
-                                moveRightSearchRowCondition,
-                                moveRightSearchFromCondition,
-                                moveRightSearchFromIncrement,
-                                moveRightNextCell,
+                                this.moveNegativeSearchCondition,
+                                this.moveNegativeSearchFromCondition,
+                                -1,
                             );
                             break;
                     }
@@ -611,6 +637,7 @@
                 renderText(context, cellX, cellY, cellSize, value) {
                     context.fillStyle = "white";
 
+                    // TODO: Also consider the cell size when the board is small.
                     context.font
                         = (value & GameBoard.SINGLE_DIGIT_MASK) ? "bold 48px serif"
                         : (value & GameBoard.DOUBLE_DIGIT_MASK) ? "bold 44px serif"
@@ -694,8 +721,8 @@
                 // Default settings for the game.
                 let gridSize      = 6;
                 let obstacleCount = 0;
-                let gameState     = gameBoard.reset(gridSize, obstacleCount);
 
+                gameBoard.reset(gridSize, obstacleCount);
                 gameBoard.render(canvas.gameContext);
 
                 totalGridSize.innerText  = `${gridSize}`;
@@ -703,7 +730,7 @@
 
                 window.addEventListener("resize", debounce(() => {
                     canvas.resize();
-                    gameBoard.render(cavas.gameContext);
+                    gameBoard.render(canvas.gameContext);
                 }), 150);
 
                 let isKeyDown = false;
@@ -748,9 +775,10 @@
                     winOverlay .classList.add("hide");
                     loseOverlay.classList.add("hide");
 
-                    renderCells(canvas.gameContext, gameState);
+                    gameBoard.render(canvas.gameContext);
                 });
 
+                // Keep track of some points in time to help us calculate the frame delta.
                 let cTime = performance.now();
                 let pTime;
                 let dTime;
