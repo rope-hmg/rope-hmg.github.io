@@ -219,12 +219,12 @@
 
                 let pointCount = MIN_POINTS;
 
-                window.addEventListener("resize", debounce(150, () => {
+                window.addEventListener("resize", debounce(() => {
                     canvas.width  = window.innerWidth;
                     canvas.height = window.innerHeight;
 
                     setPointPositions(points, pointCount, canvas.width, canvas.height);
-                }));
+                }), 150);
 
                 setPointPositions(points, pointCount, canvas.width, canvas.height);
 

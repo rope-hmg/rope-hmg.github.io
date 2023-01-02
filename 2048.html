@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>2048 Game</title>
+
+        <style type="text/css">
+            html, body {
+                margin:     0;
+                background: black;
+                color:      white;
+            }
+
+            #content {
+                display: grid;
+                width:   100%;
+                height:  100%;
+
+                grid-template: "controls" auto
+                               "canvas"   1fr;
+            }
+
+            #controls {
+                grid-area: controls;
+            }
+
+            #game-canvas {
+                grid-area: canvas;
+                position:  relative;
+                width:     100%;
+                height:    100%;
+            }
+
+            #animated-canvas {
+                grid-area: canvas;
+                position:  relative;
+                width:     100%;
+                height:    100%;
+                z-index:   10;
+            }
+
+            .overlay {
+                z-index:        100;
+                grid-area:      canvas;
+                background:     rgba(0 0 0 / 20%);
+                width:          100%;
+                height:         100%;
+                display:        grid;
+                align-content:  center;
+                justify-items:  center;
+                font-weight:    bold;
+                text-transform: uppercase;
+                font-size:      65px;
+            }
+
+            .hide { display: none; }
+        </style>
+
+        <script type="module">
+            import { debounce, randomRangeInt, randomRange } from "./modules/Utils.js";
+            import { Vec2 } from "./modules/Vec2.js";
+
+            const MIN_GRID_SIZE = 3;
+            const MAX_GRID_SIZE = 8;
+            const MIN_OBSTACLES = 0;
+            const MAX_OBSTACLES = 4;
+
+            const LEFT  = 37;
+            const UP    = 38;
+            const RIGHT = 39;
+            const DOWN  = 40;
+
+            const GAME = 0;
+            const WIN  = 1;
+            const LOSE = 2;
+
+            const OBSTACLE = -1;
+            const EMPTY    =  0;
+
+            class HslColour {
+                constructor(h, s, l) {
+                    this.h = h;
+                    this.s = s;
+                    this.l = l;
+                }
+
+                background() {
+                    return `hsl(${this.h} ${this.s}% ${this.l}%)`;
+                }
+
+                border() {
+                    return `hsl(${this.h} ${this.s - 5}% ${this.l - 15}%)`;
+                }
+            }
+
+            const EMPTY_COLOUR    = new HslColour(150, 50,  50);
+            const OBSTACLE_COLOUR = new HslColour(360, 100, 100);
+            const COLOURS         = {
+                1:    new HslColour(230, 90, 70),
+                2:    new HslColour(230, 85, 55),
+                4:    new HslColour(230, 80, 40),
+                8:    new HslColour(230, 75, 25),
+                16:   new HslColour(320, 60, 55),
+                32:   new HslColour(320, 55, 40),
+                64:   new HslColour(320, 50, 25),
+                128:  new HslColour(80, 60, 55),
+                256:  new HslColour(80, 55, 40),
+                512:  new HslColour(80, 50, 25),
+                1024: new HslColour(345, 55, 40),
+                2048: new HslColour(345, 50, 25),
+            };
+
+            function increment(stratingValue, max, element) {
+                const newValue = Math.min(stratingValue + 1, max);
+                element.innerText = `${newValue}`;
+
+                return newValue;
+            }
+
+            function decrement(stratingValue, min, element) {
+                const newValue = Math.max(stratingValue - 1, min);
+                element.innerText = `${newValue}`;
+
+                return newValue;
+            }
+
+            const moveRightSearchRowCondition  = (index)       => index > 0;
+            const moveRightSearchFromCondition = (x)           => x >= 0;
+            const moveRightSearchFromIncrement = (x)           => x - 1;
+            const moveRightNextCell            = (currentCell) => currentCell - 1;
+
+            const moveLeftSearchRowCondition  = (index, gridSize) => index < gridSize - 1;
+            const moveLeftSearchFromCondition = (x,     gridSize) => x < gridSize;
+            const moveLeftSearchFromIncrement = (x)               => x + 1;
+            const moveLeftNextCell            = (currentCell)     => currentCell + 1;
+
+            // Shh, saving some allocations.
+            const searchFromResults = [undefined, false];
+            function searchFrom(startIndex, gridSize, condition, increment, getCell) {
+                searchFromResults[0] = undefined;
+                searchFromResults[1] = false;
+
+                // Search left until found something
+                for (
+                    let x = startIndex;
+                    condition(x, gridSize) && searchFromResults[0] === undefined;
+                    x = increment(x)
+                ) {
+                    const cell = getCell(x);
+
+                    if (cell === OBSTACLE) {
+                        searchFromResults[0] = x;
+                        searchFromResults[1] = true;
+                    }
+
+                    if (cell !== EMPTY) {
+                        searchFromResults[0] = x;
+                    }
+                }
+
+                return searchFromResults;
+            }
+
+            class CanvasController {
+                constructor() {
+                    this.canvas = [
+                        document.getElementById("game-canvas"),
+                        document.getElementById("animated-canvas"),
+                    ];
+
+                    this.context = this.canvas.map((canvas) => canvas.getContext("2d"));
+
+                    this.resize();
+                }
+
+                get gameContext() {
+                    return this.context[0];
+                }
+
+                get animatedContext() {
+                    return this.context[1];
+                }
+
+                resize() {
+                    for (const canvas of this.canvas) {
+                        canvas.width  = canvas.clientWidth;
+                        canvas.height = canvas.clientHeight;
+                    }
+                }
+
+                clear() {
+                    for (const context of this.context) {
+                        context.fillStyle = "black";
+                        context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+                    }
+                }
+            }
+
+            class Stars {
+                constructor(count, gameBoard) {
+                    this.spawn = new Vec2(-100, -100);
+                    this.stars = new Array(count);
+                    this.board = gameBoard;
+
+                    const colour = new HslColour(45, 100, 50);
+
+                    this.fillStyle   = colour.background();
+                    this.strokeStyle = colour.border();
+
+                    for (let i = 0; i < count; i += 1) {
+                        const direction   = Vec2.randomUnit();
+                        const offset      = randomRange(10, 50);
+                        const translation = this.spawn.add(direction.mulAssign(offset));
+                        const lifetime    = randomRangeInt(250, 300);
+
+                        this.stars[i] = { lifetime, translation };
+                    }
+
+                    console.table(this.stars);
+                }
+
+                setSpawn(x, y) {
+                    this.spawn.x = x;
+                    this.spawn.y = y;
+                }
+
+                render(context, dTime) {
+                    const count       = this.stars.length;
+                    const spikes      = 5;
+                    const outerRadius = 6;
+                    const innerRadius = 3;
+                    const step        = Math.PI / spikes;
+                    const velocity    = -0.1;
+                    const cellSize    = this.board.cellSize(context);
+                    const smolSize    = cellSize / 4;
+
+                    context.fillStyle   = this.fillStyle;
+                    context.strokeStyle = this.strokeStyle;
+                    context.lineWidth   = 2;
+                    context.beginPath();
+
+                    for (let i = 0; i < count; i += 1) {
+                        const star = this.stars[i];
+
+                        if (star.lifetime <= 0) {
+                            const direction = Vec2.randomUnit();
+                            const offset    = randomRange(smolSize, cellSize);
+
+                            star.lifetime = randomRangeInt(250, 300);
+                            star.translation.copyFrom(this.spawn).addAssign(direction.mulAssign(offset));
+                        }
+
+                        star.lifetime      -= dTime;
+                        star.translation.y += velocity * dTime;
+
+                        let { x: cx, y: cy } = star.translation;
+                        let { x,     y     } = star.translation;
+                        let rotation = Math.PI / 2 * 3;
+
+                        context.moveTo(cx, cy - outerRadius);
+
+                        for(let j = 0; j < spikes; j += 1) {
+                            x = cx + Math.cos(rotation) * outerRadius;
+                            y = cy + Math.sin(rotation) * outerRadius;
+                            context.lineTo(x, y);
+                            rotation += step;
+
+                            x = cx + Math.cos(rotation) * innerRadius;
+                            y = cy + Math.sin(rotation) * innerRadius;
+                            context.lineTo(x, y);
+                            rotation += step;
+                        }
+
+                        context.lineTo(cx, cy - outerRadius);
+                        context.closePath();
+                    }
+
+                    context.stroke();
+                    context.fill();
+                }
+            }
+
+            class GameBoard {
+                constructor() {
+                    this.state         = GAME;
+                    this.gridSize      = 0;
+                    this.cells         = []
+                    this.lastSpawned   = 0;
+                    this.anythingMoved = false;
+                }
+
+                reset(gridSize, obstacleCount) {
+                    const cellCount = gridSize * gridSize;
+
+                    this.state    = GAME;
+                    this.gridSize = gridSize;
+                    this.cells    = new Array(cellCount);
+
+                    this.cells.fill(0);
+
+                    // Not a very fun game if the whole grid is filled with obstacles, but at least we wont get stuck in an
+                    // infinite loop trying to find somewhere to place them. Also, this will only be an issue if someone
+                    // modifies the MAX_OBSTACLES to be able to fill the grid.
+                    this.spawnAssumingSpace(OBSTACLE, Math.min(obstacleCount, cellCount));
+
+                    // Spawn the starting block. We'll use the trySpawn function that checks here since we don't know how many
+                    // obstacles there are. We could do a simple check and conditionally call spawnAssumingSpace, but I
+                    // doubt this will be a performance issue for this app.
+                    this.trySpawn(2);
+                }
+
+                spawnAssumingSpace(item, count) {
+                    const cellCount = this.cells.length;
+                    let itemsToSpawn = count;
+
+                    while (itemsToSpawn > 0) {
+                        const itemCell = randomRangeInt(0, cellCount);
+
+                        if (this.cells[itemCell] === EMPTY) {
+                            this.cells[itemCell] = item;
+
+                            this.lastSpawned = itemCell;
+                            itemsToSpawn -= 1;
+                        }
+                    }
+                }
+
+                trySpawn(item) {
+                    const cellCount = this.cells.length;
+                    let spaceToSpawn = false;
+
+                    for (
+                        let i = 0;
+                        i < cellCount && !spaceToSpawn;
+                        i += 1
+                    ) {
+                        spaceToSpawn = this.cells[i] === EMPTY;
+                    }
+
+                    if (spaceToSpawn) {
+                        this.spawnAssumingSpace(item, 1);
+                    }
+
+                    return spaceToSpawn;
+                }
+
+                // getIndex(x, y) {
+                //     return x + y * this.gridSize;
+                // }
+
+                /**
+                 * @param x The x coordinate in grid space
+                 * @param y The y coordinate in grid space
+                 * @returns number | undefined
+                 */
+                getCell(x, y) {
+                    return this.cells[x + y * this.gridSize];
+                }
+
+                /**
+                 * @param x    The x coordinate in grid space
+                 * @param y    The y coordinate in grid space
+                 * @param cell The value to set in this cell
+                 *
+                 * @important This method doesn't check that the requested cell is valid.
+                 */
+                setCell(x, y, value) {
+                    this.cells[x + y * this.gridSize] = value;
+                }
+
+                updateCells(
+                    startIndex,
+                    searchCondition,
+                    searchFromCondition,
+                    searchFromIncrement,
+                    getCell,
+                    setCell,
+                    nextCell,
+                ) {
+                    const { gridSize } = this;
+
+                    while (searchCondition(startIndex, gridSize)) {
+                        // search until found something
+                        const [firstIndex, firstObstacle] = searchFrom(startIndex, gridSize, searchFromCondition, searchFromIncrement, getCell);
+
+                        if (firstIndex === undefined) {
+                            break;
+                        }
+
+                        if (firstObstacle) {
+                            startIndex = nextCell(firstIndex);
+                            continue;
+                        }
+
+                        // if found something move to start
+                        const firstCell       = getCell(firstIndex);
+                        const firstShouldMove = firstIndex !== startIndex;
+
+                        if (firstShouldMove) {
+                            this.anythingMoved = true;
+                            setCell(startIndex, firstCell);
+                            setCell(firstIndex, EMPTY);
+                        }
+
+                        // search again until found something
+                        const secondStart = nextCell(firstIndex);
+                        const [secondIndex, secondObstacle] = searchFrom(secondStart, gridSize, searchFromCondition, searchFromIncrement, getCell);
+
+                        if (secondIndex === undefined) {
+                            break;
+                        }
+
+                        if (secondObstacle) {
+                            startIndex = nextCell(secondIndex);
+                            continue;
+                        }
+
+                        // if found something and same as first then combine
+                        const secondCell = getCell(secondIndex);
+
+                        if (firstCell === secondCell) {
+                            const combined = firstCell + secondCell;
+
+                            if (combined === 2048) {
+                                gameState.state = WIN;
+                            }
+
+                            this.anythingMoved = true;
+                            setCell(startIndex,  firstCell + secondCell);
+                            setCell(secondIndex, EMPTY);
+                        } else {
+                            const secondShouldMove = secondIndex !== secondStart;
+
+                            if (secondShouldMove) {
+                                this.anythingMoved = true;
+                                setCell(nextCell(startIndex), secondCell);
+                                setCell(secondIndex,          EMPTY);
+                            }
+                        }
+
+                        // move to next cell repeat
+                        startIndex = nextCell(startIndex);
+                    }
+                }
+
+                updateCellsLeftRight(
+                    startIndex,
+                    searchRowCondition,
+                    searchFromCondition,
+                    searchFromIncrement,
+                    nextCell,
+                ) {
+                    const { gridSize } = this;
+
+                    for (let y = 0; y < gridSize; y += 1) {
+                        const getCell = (x)        => this.getCell(x, y);
+                        const setCell = (x, value) => this.setCell(x, y, value);
+
+                        this.updateCells(
+                            startIndex,
+                            searchRowCondition,
+                            searchFromCondition,
+                            searchFromIncrement,
+                            getCell,
+                            setCell,
+                            nextCell,
+                        );
+                    }
+                }
+
+                updateCellsUpDown(
+                    startIndex,
+                    searchColumnCondition,
+                    searchFromCondition,
+                    searchFromIncrement,
+                    nextCell,
+                ) {
+                    const { gridSize } = this;
+
+                    for (let x = 0; x < gridSize; x += 1) {
+                        const getCell = (y)        => this.getCell(x, y);
+                        const setCell = (y, value) => this.setCell(x, y, value);
+
+                        this.updateCells(
+                            startIndex,
+                            searchColumnCondition,
+                            searchFromCondition,
+                            searchFromIncrement,
+                            getCell,
+                            setCell,
+                            nextCell,
+                        );
+                    }
+                }
+
+                movesAvailable() {
+                    let canContinue = false;
+
+                    const { gridSize } = this;
+
+                    for (
+                        let y = 0;
+                        y < gridSize && !canContinue;
+                        y += 1
+                    ) {
+                        for (
+                            let x = 0;
+                            x < gridSize && !canContinue;
+                            x += 1
+                        ) {
+                            const cellValue = this.getCell(x, y);
+
+                            if (cellValue !== OBSTACLE && cellValue !== EMPTY) {
+                                const leftCell  = this.getCell(x - 1, y    );
+                                const upCell    = this.getCell(x    , y - 1);
+                                const rightCell = this.getCell(x + 1, y    );
+                                const downCell  = this.getCell(x    , y + 1);
+
+                                canContinue = leftCell  === cellValue || leftCell  === EMPTY
+                                           || upCell    === cellValue || upCell    === EMPTY
+                                           || rightCell === cellValue || rightCell === EMPTY
+                                           || downCell  === cellValue || downCell  === EMPTY;
+                            }
+                        }
+                    }
+
+                    return canContinue;
+                }
+
+                update(keyCode) {
+                    this.anythingMoved = false;
+
+                    switch (keyCode) {
+                        case LEFT:
+                            this.updateCellsLeftRight(
+                                0,
+                                moveLeftSearchRowCondition,
+                                moveLeftSearchFromCondition,
+                                moveLeftSearchFromIncrement,
+                                moveLeftNextCell,
+                            );
+                            break;
+
+                        case UP:
+                            this.updateCellsUpDown(
+                                0,
+                                moveLeftSearchRowCondition,
+                                moveLeftSearchFromCondition,
+                                moveLeftSearchFromIncrement,
+                                moveLeftNextCell,
+                            );
+                            break;
+
+                        case RIGHT:
+                            this.updateCellsLeftRight(
+                                this.gridSize - 1,
+                                moveRightSearchRowCondition,
+                                moveRightSearchFromCondition,
+                                moveRightSearchFromIncrement,
+                                moveRightNextCell,
+                            );
+                            break;
+
+                        case DOWN:
+                            this.updateCellsUpDown(
+                                this.gridSize - 1,
+                                moveRightSearchRowCondition,
+                                moveRightSearchFromCondition,
+                                moveRightSearchFromIncrement,
+                                moveRightNextCell,
+                            );
+                            break;
+                    }
+
+                    if (this.anythingMoved) {
+                        this.trySpawn(1);
+                    }
+
+                    if (!this.movesAvailable()) {
+                        this.state = LOSE;
+                    }
+                }
+
+                renderCell(context, cellX, cellY, cellSide, cellCorner, colour) {
+                    context.fillStyle = colour.background();
+                    context.strokeStyle = colour.border();
+                    context.lineWidth = 4;
+
+                    context.beginPath();
+
+                    context.moveTo(Math.floor(cellX),                         Math.floor(cellY + cellCorner));
+                    context.lineTo(Math.floor(cellX),                         Math.floor(cellY + cellSide));
+                    context.lineTo(Math.floor(cellX + cellCorner),            Math.floor(cellY + cellSide + cellCorner));
+                    context.lineTo(Math.floor(cellX + cellSide),              Math.floor(cellY + cellSide + cellCorner));
+                    context.lineTo(Math.floor(cellX + cellSide + cellCorner), Math.floor(cellY + cellSide));
+                    context.lineTo(Math.floor(cellX + cellSide + cellCorner), Math.floor(cellY + cellCorner));
+                    context.lineTo(Math.floor(cellX + cellSide),              Math.floor(cellY));
+                    context.lineTo(Math.floor(cellX + cellCorner),            Math.floor(cellY));
+                    context.closePath();
+
+                    context.fill();
+                    context.stroke();
+                }
+
+                static SINGLE_DIGIT_MASK = 0x000F;
+                static DOUBLE_DIGIT_MASK = 0x0070;
+                static TRIPLE_DIGIT_MASK = 0x0380;
+
+                renderText(context, cellX, cellY, cellSize, value) {
+                    context.fillStyle = "white";
+
+                    context.font
+                        = (value & GameBoard.SINGLE_DIGIT_MASK) ? "bold 48px serif"
+                        : (value & GameBoard.DOUBLE_DIGIT_MASK) ? "bold 44px serif"
+                        : (value & GameBoard.TRIPLE_DIGIT_MASK) ? "bold 40px serif"
+                        :                                         "bold 36px serif";
+
+                    const text = value.toString();
+                    const {
+                        width,
+                        actualBoundingBoxAscent,
+                        actualBoundingBoxDescent,
+                    } = context.measureText(text);
+
+                    const height = actualBoundingBoxAscent - actualBoundingBoxDescent;
+
+                    const x = cellX + (cellSize - width) / 2;
+                    const y = cellY + (cellSize + height) / 2;
+
+                    context.fillText(text, Math.floor(x), Math.floor(y));
+                }
+
+                cellSize(context) {
+                    const gridSize = Math.min(context.canvas.width, context.canvas.height);
+                    const cellSize = gridSize / this.gridSize;
+
+                    return cellSize;
+                }
+
+                lastSpawnedPosition(context) {
+                    const cellSize = this.cellSize(context);
+                    const halfSize = cellSize / 2;
+
+                    const x = Math.floor(this.lastSpawned % this.gridSize) * cellSize + halfSize;
+                    const y = Math.floor(this.lastSpawned / this.gridSize) * cellSize + halfSize;
+
+                    return new Vec2(x, y);
+                }
+
+                render(context) {
+                    const cellPadding = 2;
+                    const cellCorner  = 8;
+
+                    const paddedSize = this.cellSize(context);
+                    const cellSize = paddedSize - cellPadding * 2;
+                    const cellSide = cellSize   - cellCorner  * 2;
+
+                    for (let y = 0; y < this.gridSize; y += 1) {
+                        for (let x = 0; x < this.gridSize; x += 1) {
+                            const cell  = this.getCell(x, y);
+                            const cellX = x * paddedSize + cellPadding;
+                            const cellY = y * paddedSize + cellPadding;
+
+                            if (cell === OBSTACLE) {
+                                this.renderCell(context, cellX, cellY, cellSide, cellCorner, OBSTACLE_COLOUR);
+                            } else if (cell === EMPTY) {
+                                this.renderCell(context, cellX, cellY, cellSide, cellCorner, EMPTY_COLOUR);
+                            } else {
+                                this.renderCell(context, cellX, cellY, cellSide, cellCorner, COLOURS[cell]);
+                                this.renderText(context, cellX, cellY, cellSize, cell);
+                            }
+                        }
+                    }
+                }
+            }
+
+            function main() {
+                const startNewGame   = document.getElementById("new");
+                const totalGridSize  = document.getElementById("grid-size");
+                const gridSizeInc    = document.getElementById("grid-inc");
+                const gridSizeDec    = document.getElementById("grid-dec");
+                const totalObstacles = document.getElementById("obstacles");
+                const obstacleInc    = document.getElementById("obstacle-inc");
+                const obstacleDec    = document.getElementById("obstacle-dec");
+                const winOverlay     = document.getElementById("win");
+                const loseOverlay    = document.getElementById("lose");
+
+                const canvas    = new CanvasController();
+                const gameBoard = new GameBoard();
+                const stars     = new Stars(20, gameBoard);
+
+                // Default settings for the game.
+                let gridSize      = 6;
+                let obstacleCount = 0;
+                let gameState     = gameBoard.reset(gridSize, obstacleCount);
+
+                gameBoard.render(canvas.gameContext);
+
+                totalGridSize.innerText  = `${gridSize}`;
+                totalObstacles.innerText = `${obstacleCount}`;
+
+                window.addEventListener("resize", debounce(() => {
+                    canvas.resize();
+                    gameBoard.render(cavas.gameContext);
+                }), 150);
+
+                let isKeyDown = false;
+
+                window.addEventListener("keydown", (event) => {
+                    if (event.keyCode >= LEFT && event.keyCode <= DOWN && !isKeyDown) {
+                        event.preventDefault();
+
+                        gameBoard.update(event.keyCode);
+                        gameBoard.render(canvas.gameContext);
+
+                        const lastSpawned = gameBoard.lastSpawnedPosition(canvas.gameContext);
+                        stars.setSpawn(lastSpawned.x, lastSpawned.y);
+
+                        switch (gameBoard.state) {
+                            case WIN:
+                                winOverlay.classList.remove("hide");
+                                break;
+
+                            case LOSE:
+                                loseOverlay.classList.remove("hide");
+                                break;
+                        }
+                    }
+
+                    isKeyDown = true;
+                });
+
+                window.addEventListener("keyup", () => {
+                    isKeyDown = false;
+                });
+
+                gridSizeInc.addEventListener("click", () => gridSize = increment(gridSize, MAX_GRID_SIZE, totalGridSize));
+                gridSizeDec.addEventListener("click", () => gridSize = decrement(gridSize, MIN_GRID_SIZE, totalGridSize));
+                obstacleInc.addEventListener("click", () => obstacleCount = increment(obstacleCount, MAX_OBSTACLES, totalObstacles));
+                obstacleDec.addEventListener("click", () => obstacleCount = decrement(obstacleCount, MIN_OBSTACLES, totalObstacles));
+
+                startNewGame.addEventListener("click", () => {
+                    gameBoard.reset(gridSize, obstacleCount);
+
+                    canvas.clear();
+                    winOverlay .classList.add("hide");
+                    loseOverlay.classList.add("hide");
+
+                    renderCells(canvas.gameContext, gameState);
+                });
+
+                let cTime = performance.now();
+                let pTime;
+                let dTime;
+
+                function frame(nTime) {
+                    pTime = cTime;
+                    cTime = nTime;
+                    dTime = cTime - pTime;
+
+                    const context = canvas.animatedContext;
+
+                    context.canvas.width = context.canvas.width;
+                    stars.render(context, dTime);
+
+                    requestAnimationFrame(frame);
+                }
+
+                frame(performance.now());
+            }
+
+            window.addEventListener("DOMContentLoaded", main);
+        </script>
+    </head>
+
+    <body>
+        <article id=content>
+            <section id=controls>
+                <a href="./index.html">Home</a>
+                <button id=new>Start New Game</button>
+                Grid Size: <span id=grid-size></span>
+                <button id=grid-inc>Increase Grid Size</button>
+                <button id=grid-dec>Decrease Grid Size</button>
+                Obstacles: <span id=obstacles></span>
+                <button id=obstacle-inc>Increase Obstacle Count</button>
+                <button id=obstacle-dec>Decrease Obstacle Count</button>
+            </section>
+
+            <div id=win class="hide overlay">
+                <span>Congratulations!</span>
+                <span>You reached 2048!</span>
+            </div>
+
+            <div id=lose class="hide overlay">
+                <span>No Moves Remaining!</span>
+                <span>Game Over!</span>
+            </div>
+
+            <canvas id=game-canvas></canvas>
+            <canvas id=animated-canvas></canvas>
+        </article>
+    </body>
+</html>

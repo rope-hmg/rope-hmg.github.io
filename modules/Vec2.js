@@ -128,5 +128,7 @@ export class Vec2 {
     copyFrom(rhs) {
         this.x = rhs.x;
         this.y = rhs.y;
+
+        return this;
     }
 }

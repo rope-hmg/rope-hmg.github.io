@@ -7,6 +7,10 @@ export function debounce(fn, ms) {
     };
 }
 
+export function clamp(value, min, max) {
+    return Math.max(Math.min(value, max), min);
+}
+
 export function randomRange(min, max) {
     return Math.random() * (max - min) + min;
 }
@@ -20,8 +24,8 @@ export function shuffle(items) {
         const j = randomRangeInt(0, items.length - 1);
 
         const temp = items[i];
-        items[i]   = items[j];
-        items[j]   = temp;
+        items[i] = items[j];
+        items[j] = temp;
     }
 
     return items;
