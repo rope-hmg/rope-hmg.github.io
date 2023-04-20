@@ -8,10 +8,13 @@ const vec3 zero  = vec3(0.0);
 const vec3 one   = vec3(1.0);
 const vec3 white = one;
 const vec3 blue  = vec3(0.5, 0.7, 1.0);
+const vec3 brown = vec3(0.4, 0.2, 0.1);
 
-const int max_sample_count = 4;
-const int max_bounces      = 16;
+const int max_sample_count = 32;
+const int max_bounces      = 4;
 const int ball_count       = 6;
+
+const float PI = 3.14159265358979323846264338327950288;
 
 struct Ray {
     vec3 origin;
@@ -19,10 +22,14 @@ struct Ray {
 };
 
 struct Material {
-    float kind;
-    float roughness;
-    vec3  colour;
-    float eta;
+    vec3  specular_colour;
+    float specular_roughness;
+
+    vec3  diffuse_colour;
+    float diffuse_roughness;
+
+    float metalness;
+    float emissiveness;
 };
 
 struct Ball {
@@ -40,66 +47,88 @@ struct Hit {
 
 vec3 face_normal(Ray ray, vec3 outward_normal) {
     bool front_face = dot(ray.direction, outward_normal) < 0.0;
-    return front_face ? outward_normal :-outward_normal;
+    return front_face ? outward_normal : -outward_normal;
 }
 
 vec3 lerp(vec3 start, vec3 end, float t) {
     return (1.0 - t) * start + t * end;
 }
 
-float random(vec2 st) {
-    return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123) + 0.000001;
+float random(inout float state) {
+    state = fract(state * .1031);
+    state *= state + 33.33;
+    state *= state + state;
+
+    return fract(state);
 }
 
-vec2 random_unit(vec2 seed) {
+vec2 random_unit2(inout float state) {
     return vec2(
-        random(seed.xy),
-        random(seed.yx)
+        random(state),
+        random(state)
     );
 }
 
-vec3 random_unit(vec3 seed) {
+vec3 random_unit3(inout float state) {
     return vec3(
-        random(seed.xy),
-        random(seed.yz),
-        random(seed.zx)
+        random(state),
+        random(state),
+        random(state)
     );
+}
+
+vec2 random_point_in_circle(inout float state) {
+    float theta = 2.0 * PI * random(state);
+    vec2  point_on_circle = vec2(cos(theta), sin(theta));
+    vec2  point_in_circle = point_on_circle * sqrt(random(state));
+
+    return point_in_circle;
+}
+
+vec3 random_jitter(inout float state) {
+    vec3 camera_right = vec3(1.0, 0.0, 0.0);
+    vec3 camera_up    = vec3(0.0, 1.0, 0.0);
+
+    vec2 jitter_point = random_point_in_circle(state);
+
+    return camera_right * jitter_point.x
+         + camera_up    * jitter_point.y;
 }
 
 bool hit_ball(inout Hit hit, Ball ball, Ray ray) {
     bool is_hit = false;
 
-    vec3  origin_to_centre             = ball.centre - ray.origin;
-    float distance_along_ray_to_centre = dot(ray.direction, origin_to_centre);
+    vec3 translated_origin = ray.origin - ball.centre;
 
-    if (distance_along_ray_to_centre > 0.0) {
-        float distance_from_centre_to_ray_squared = dot(origin_to_centre, origin_to_centre) - distance_along_ray_to_centre * distance_along_ray_to_centre;
-        float radius_squared                      = ball.radius * ball.radius;
+    float a = dot(ray.direction, ray.direction);
+    float b = 2.0 * dot(translated_origin, ray.direction);
+    float c = dot(translated_origin, translated_origin) - ball.radius * ball.radius;
 
-        if (radius_squared > distance_from_centre_to_ray_squared) {
-            is_hit = true;
+    // Solve using the quadratic formula.
+    // First step is to calculate the discriminant. This will tell us how many solutions exist.
+    float discriminant = b * b - 4.0 * a * c;
 
-            float distance_along_ray_from_intersection_to_centre = sqrt(radius_squared - distance_from_centre_to_ray_squared);
+    if (discriminant >= 0.0) {
+        is_hit = true;
 
-            hit.t = distance_along_ray_to_centre - distance_along_ray_from_intersection_to_centre;
-            hit.p = ray.origin + ray.direction * hit.t;
-            hit.n = (hit.p - ball.centre) / ball.radius;
-            hit.b = ball;
-        }
+        hit.t = (-b - sqrt(discriminant)) / 2.0 * a;
+        hit.p = ray.origin + ray.direction * hit.t;
+        hit.n = (hit.p - ball.centre) / ball.radius;
+        hit.b = ball;
     }
 
     return is_hit;
 }
 
 bool hit_any(inout Hit hit, Ball[ball_count] balls, Ray ray) {
-    float closest = 1.0 / 0.0;
     bool  is_hit = false;
+    float closest = 1.0 / 0.0;
     Hit   temp;
 
     for (int i = 0; i < ball_count; i += 1) {
         Ball ball = balls[i];
 
-        if (hit_ball(temp, ball, ray) && temp.t < closest) {
+        if (hit_ball(temp, ball, ray) && temp.t < closest && temp.t > 0.0) {
             closest = temp.t;
             hit     = temp;
             is_hit  = true;
@@ -109,105 +138,76 @@ bool hit_any(inout Hit hit, Ball[ball_count] balls, Ray ray) {
     return is_hit;
 }
 
-void metal(inout Ray ray, inout vec3 attenuation, Hit hit) {
-    ray.origin    = hit.p;
-    ray.direction = normalize(reflect(ray.direction, hit.n) + random_unit(hit.n) * hit.b.material.roughness);
-
-    attenuation = hit.b.material.colour;
+// The Schlick approximation of the Fresnel reflectance for the material.
+vec3 schlick(vec3 specular_colour, vec3 light_direction, vec3 normal) {
+    return specular_colour + (one - specular_colour) * pow(1.0 - dot(light_direction, normal), 5.0);
 }
 
-float reflectance(float cos_theta, float eta) {
-    // Use Schlick's approximation for reflectance.
-    float r0 = (1.0 - eta) / (1.0 + eta);
-    r0 = r0 * r0;
+vec3 environment(Ray ray) {
+    float sky_gradient_t = pow(smoothstep(0.0, 0.4, ray.direction.y), 0.35);
+    vec3  sky_gradient   = lerp(white, blue, sky_gradient_t);
 
-    return r0 + (1.0 - r0) * pow((1.0 - cos_theta), 5.0);
-}
+    vec3  sun_light_direction = normalize(vec3(1.0, -1.0, 1.0));
+    float sun_focus           = 1.0;
+    float sun_intensity       = 1.0;
+    float sun                 = pow(max(0.0, dot(ray.direction, -sun_light_direction)), sun_focus) * sun_intensity;
 
-void glass(inout Ray ray, inout vec3 attenuation, Hit hit) {
-    float cos_theta = dot(-ray.direction, hit.n);
-    float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+    float ground_to_sky_t = smoothstep(-0.01, 0.0, ray.direction.y);
+    float sun_mask        = float(ground_to_sky_t >= 1.0);
 
-    float eta = cos_theta < 0.0
-        ? (1.0 / hit.b.material.eta)
-        :        hit.b.material.eta;
-
-    vec3 scatter_direction = (eta * sin_theta > 1.0) || (reflectance(cos_theta, eta) > random(hit.n.xy))
-        ? reflect(ray.direction, hit.n)
-        : refract(ray.direction, hit.n, eta);
-
-    ray.origin    = hit.p;
-    ray.direction = normalize(scatter_direction + random_unit(hit.n) * hit.b.material.roughness);
-
-    attenuation = ray.direction;//hit.b.material.colour;
-}
-
-void lambertian(inout Ray ray, inout vec3 attenuation, Hit hit) {
-    vec3 scatter_direction = hit.n + random_unit(hit.n);
-
-    if (
-        abs(scatter_direction.x) < 1e-8 &&
-        abs(scatter_direction.y) < 1e-8 &&
-        abs(scatter_direction.z) < 1e-8
-    ) {
-        scatter_direction = hit.n;
-    }
-
-    ray.origin    = hit.p;
-    ray.direction = normalize(scatter_direction);
-
-    attenuation = hit.b.material.colour;
+    return lerp(brown, sky_gradient, ground_to_sky_t) + sun * sun_mask;
 }
 
 void main() {
     Ball balls[ball_count];
-    balls[0] = Ball(vec3(0.0, -100.5, -1.0), 100.0, Material(0.0, 0.0, vec3(0.8, 0.8, 0.0), 1.5));
-    balls[1] = Ball(vec3(0.0, -0.3, -1.5), 0.2, Material(1.0, 0.01, vec3(0.7, 0.3, 0.3), 1.5));
-    balls[2] = Ball(vec3(0.7, -0.1, -1.3), -0.4, Material(2.0, 0.0, vec3(0.8, 0.6, 0.2), 1.5));
-    balls[3] = Ball(vec3(0.7, -0.1, -1.3), 0.2, Material(1.0, 0.0, vec3(0.8, 0.6, 0.2), 1.5));
-    balls[4] = Ball(vec3(-0.6, -0.2, -1.0), 0.3, Material(0.0, 0.0, vec3(0.1, 0.2, 0.5), 1.5));
-    balls[5] = Ball(vec3(0.15, -0.3, -0.7), 0.2, Material(1.0, 0.05, vec3(0.8, 0.8, 0.8), 1.5));
+    balls[0] = Ball(vec3( 0.0,  -100.5, -1.0  ),  100.0, Material(vec3(0.000, 0.000, 0.000), 1.0, vec3(0.419, 0.266, 0.137), 1.0,  0.1, 0.0)); // Dirt
+    balls[1] = Ball(vec3( 0.0,  -0.3,   -1.5  ),  0.2,   Material(vec3(0.542, 0.497, 0.499), 0.5, vec3(1.000, 1.000, 1.000), 0.01, 1.0, 0.0)); // Titanium
+    balls[2] = Ball(vec3( 0.7,  -0.1,   -1.3  ),  0.4,   Material(vec3(0.045, 0.045, 0.045), 0.2, vec3(1.000, 1.000, 1.000), 0.1,  0.2, 0.0)); // Glass
+    balls[3] = Ball(vec3(-20.0,  20.0,  -100.0),  30.0,  Material(vec3(0.562, 0.565, 0.578), 0.7, vec3(1.000, 1.000, 1.000), 0.12,  1.0, 0.0)); // Iron
+    balls[4] = Ball(vec3(-0.6,  -0.2,   -1.0  ),  0.3,   Material(vec3(0.100, 0.100, 0.100), 0.1, vec3(0.000, 0.392, 0.000), 0.7,  0.4, 0.0)); // Plastic
+    balls[5] = Ball(vec3( 0.15, -0.3,   -0.7  ),  0.2,   Material(vec3(0.955, 0.638, 0.538), 0.3, vec3(1.000, 1.000, 1.000), 0.05, 1.0, 0.0)); // Copper
 
     vec3 pixel_colour = zero;
-    vec3 sample_colour = one;
 
-    Ray ray;
+    float rng_state = v_position.x + v_position.y * 1000.0;
 
     for (int i = 0; i < max_sample_count; i += 1) {
-        vec2 uv = v_position + random_unit(v_position) * 0.001;
+        vec3 jittered_origin    = zero                   + random_jitter(rng_state) * 0.001;
+        vec3 jittered_direction = vec3(v_position, -1.0) + random_jitter(rng_state) * 0.001;
 
-        ray.origin    = zero;
-        ray.direction = normalize(vec3(uv, -1.0));
+        Ray ray = Ray(jittered_origin, normalize(jittered_direction));
 
-        vec3 colours[max_bounces];
-        for (int c = 0; c < max_bounces; c += 1) {
-            colours[c] = one;
-        }
+        vec3 ray_colour      = one;
+        vec3 collected_light = zero;
 
         for (int bounce = 0; bounce < max_bounces; bounce += 1) {
             Hit hit;
 
             if (hit_any(hit, balls, ray)) {
-                float kind = hit.b.material.kind;
+                Material material = hit.b.material;
 
-                     if (kind == 0.0) lambertian(ray, colours[bounce], hit);
-                else if (kind == 1.0) metal(ray, colours[bounce], hit);
-                else if (kind == 2.0) glass(ray, colours[bounce], hit);
-                else                  lambertian(ray, colours[bounce], hit);
+                ray.origin = hit.p;
+
+                vec3 specular_direction = normalize(reflect(ray.direction, hit.n));
+                vec3 diffuse_direction  = normalize(random_unit3(rng_state) + hit.n);
+
+                ray.direction = lerp(diffuse_direction, specular_direction, material.metalness);
+
+                collected_light += blue * material.emissiveness * ray_colour;
+                ray_colour      *= lerp(
+                    material.diffuse_colour / PI,
+                    schlick(material.specular_colour, ray.direction, hit.n),
+                    material.metalness
+                );
             } else {
-                float pixel_height = 0.5 * (ray.direction.y + 1.0);
-                colours[bounce] = lerp(white, blue, pixel_height);
+                collected_light += environment(ray) * ray_colour;
 
                 // The ray missed all the objects, so we can move on to the next sample.
                 break;
             }
         }
 
-        for (int b = max_bounces - 1; b >= 0; b -= 1) {
-            sample_colour *= colours[b];
-        }
-
-        pixel_colour += sample_colour;
+        pixel_colour += collected_light;
     }
 
     float scale = 1.0 / float(max_sample_count);
