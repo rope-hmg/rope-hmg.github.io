@@ -25,15 +25,10 @@
             }
 
             body {
-                display: grid;
-                justify-content: center;
-
-                min-width:   368px;
                 margin:      0;
+                font-family: Arial, Helvetica, sans-serif;
                 background:  var(--bg-colour);
                 color:       var(--font-colour);
-                font-family: Arial, Helvetica, sans-serif;
-                overflow-x:  hidden;
             }
 
             h1 {
@@ -48,7 +43,17 @@
                 color: var(--link-colour);
             }
 
-            #background-canvas {
+            #content {
+                position: relative;
+                display: grid;
+                justify-content: center;
+
+                min-width:   368px;
+                margin:      0;
+                overflow-x:  hidden;
+            }
+
+            #balls-canvas {
                 position: fixed;
                 z-index: -1;
                 width: 100%;
@@ -83,8 +88,9 @@
         </style>
 
         <script type="module">
-            import { Vec2 } from './modules/Vec2.js';
-            import { debounce, randomRange, shuffle } from './modules/Utils.js';
+            import { Vec2 } from "./modules/Vec2.js";
+            import { debounce, randomRange, shuffle } from "./modules/Utils.js";
+            import { createProgram } from "./modules/Shader.js";
 
             const BALL_COLOURS = shuffle([
                 "#673CFA", // Purple
@@ -186,7 +192,7 @@
                     const ball = balls[i];
 
                     const { position, velocity, radius } = ball;
-                    const { width, height }               = canvas
+                    const { width, height }              = canvas
 
                     let reflectionNormal;
 
@@ -208,7 +214,7 @@
                 }
             }
 
-            function renderBallPaths(context, balls, textL, textR) {
+            function renderFilledBalls(context, balls, textL, textR) {
                 for (let i = 0; i < balls.length; i += 1) {
                     const { position, colour, radius } = balls[i];
 
@@ -230,7 +236,7 @@
                 }
             }
 
-            function renderBallShells(context, balls, textL, textR) {
+            function renderHollowBalls(context, balls, textL, textR) {
                 for (let i = 0; i < balls.length; i += 1) {
                     const { position, colour, radius } = balls[i];
 
@@ -252,13 +258,8 @@
                 }
             }
 
-            function main() {
-                const name    = document.getElementById("name");
-                const canvas  = document.getElementById("background-canvas");
-                const context = canvas.getContext("2d");
-
-                canvas.width  = window.innerWidth;
-                canvas.height = window.innerHeight;
+            async function main() {
+                const name = document.getElementById("name");
 
                 let {
                     left:  textL,
@@ -270,6 +271,12 @@
                 const textWExtraBit = 16;
 
                 textW += textWExtraBit;
+
+                const canvas  = document.getElementById("balls-canvas");
+                const context = canvas.getContext("2d");
+
+                canvas.width  = window.innerWidth;
+                canvas.height = window.innerHeight;
 
                 const debouncedSetCanvasSize = debounce(() => {
                     canvas.width  = window.innerWidth;
@@ -294,7 +301,7 @@
                     mouse.y = event.clientY;
                 });
 
-                let balls = spawnBalls(canvas);
+                const balls = spawnBalls(canvas);
 
                 // Time tracking for consistent movement across different devices.
                 let cTime = performance.now();
@@ -314,9 +321,9 @@
                     respawnIfOffscreen(balls, canvas);
 
                     // Render the balls in their new positions.
-                    renderBallPaths(context, balls, textL, textR);
+                    renderFilledBalls(context, balls, textL, textR);
                     context.clearRect(textL, 0, textW, canvas.height);
-                    renderBallShells(context, balls, textL, textR);
+                    renderHollowBalls(context, balls, textL, textR);
 
                     // Request next frame
                     requestAnimationFrame(frame);
@@ -330,163 +337,173 @@
     </head>
 
     <body>
-        <canvas id=background-canvas></canvas>
+        <canvas id=balls-canvas></canvas>
 
-        <h1 id=name>Hector Maddock-Greene</h1>
+        <section id=content>
+            <h1 id=name>Hector Maddock-Greene</h1>
 
-        <p>
-            <a href="https://www.linkedin.com/in/hector-maddock-greene-14a8a3234/">LinkedIn</a>
-            <a href="https://github.com/rope-hmg">GitHub</a>
-        </p>
+            <p>
+                <a href="https://www.linkedin.com/in/hector-maddock-greene-14a8a3234/">LinkedIn</a>
+                <a href="https://github.com/rope-hmg">GitHub</a>
+            </p>
 
-        <p>
-            <a href="./snake.html">Snake</a>
-            <a href="./webgl.html">Path Tracer</a>
-            <a href="./2048.html">2048</a>
-        </p>
+            <p>
+                <a href="./snake.html">Snake</a>
+                <a href="./webgl.html">Path Tracer</a>
+                <a href="./2048.html">2048</a>
+            </p>
 
-        <p>
-            Highly experienced Typescript and Rust developer.
-        </p>
+            <p>
+                Highly experienced Typescript and Rust developer.
+            </p>
 
-        <p>
-            Currently working for a large company as a senior developer leading two fast paced agile scrum teams.
-        </p>
+            <p>
+                Currently looking for my next big role.
+            </p>
 
-        <article>
-            <h2>Work</h2>
+            <article>
+                <h2>Work</h2>
 
-            <section>
-                <h3>Wren Kitchens</h3>
+                <section>
+                    <h3>Wren Kitchens</h3>
 
-                <h4>Senior Developer</h4> 2020 - Current
+                    <h4>Senior Developer</h4> 2020 - 2023
 
-                <ul>
-                    <li>Architecture team lead + scrum master</li>
-                    <li>Technical Improvements team lead + scrum master</li>
-                    <li>Scrum duties for two teams</li>
-                    <li>High level visioning with stake holders</li>
-                    <li>Replaced HTML5 canvas renderer with WebGL</li>
-                    <li>Implemented a typesafe ECS system in Typescript</li>
-                    <li>Transitioned the application from an event driven architecture to an on-demand loop based architecture</li>
-                    <li>Implemented spatial partitioning to improve collision detection performance</li>
-                    <li>Implemented high performance, lockless, multi-threaded job system using WebWorkers SharedArrayBuffers</li>
-                    <li>Implemented a path finding system to generate procedural walk around videos for customer kitchens</li>
-                </ul>
+                    <ul>
+                        <li>Architecture team lead + scrum master + project manager</li>
+                        <li>Technical Improvements team lead + scrum master + project manager</li>
+                        <li>Scrum duties, lead developer duties, project management and business analyst for two teams</li>
+                        <li>Implemented a high performance, lockless, multithreaded job system using WebWorkers and SharedArrayBuffers.</li>
+                        <li>Implemented a path finding system to generate procedural walk around videos for customer kitchens.</li>
+                        <li>Managed time efficiently in order to complete all tasks within deadlines.</li>
+                        <li>Self-motivated, with a strong sense of personal responsibility.</li>
+                        <li>Used critical thinking to break down problems, evaluate solutions and make decisions.</li>
+                        <li>High level visioning with stakeholders</li>
+                        <li>Replaced HTML5 canvas renderer with WebGL</li>
+                        <li>Implemented a typesafe ECS system in Typescript</li>
+                        <li>Transitioned the application from an event driven architecture to a loop based architecture</li>
+                        <li>Implemented spatial partitioning to improve collision detection performance</li>
+                        <li>Implemented and maintained a Rust based time tracking work log system</li>
+                        <li>Implemented and maintained a Rust based development environment manager. (Starting docker containers, running build scripts, managing config files, etc)</li>
+                    </ul>
 
-                <h4>Intermediate Developer</h4>  2019 - 2020
-                <ul>
-                    <li>Managing the graduate scheme</li>
-                    <li>Managing the webpack build system</li>
-                    <li>Interviewing candidates</li>
-                    <li>Handling deployments</li>
-                    <li>Working on the US conversion project</li>
-                    <li>Business Improvements team lead</li>
-                </ul>
+                    <h4>Intermediate Developer</h4>  2019 - 2020
+                    <ul>
+                        <li>Managing the graduate scheme</li>
+                        <li>Training multiple intakes of graduate developers</li>
+                        <li>Interviewing candidates</li>
+                        <li>Mentoring junior developers</li>
+                        <li>Managing the webpack based build system</li>
+                        <li>Handling software deployments</li>
+                        <li>Working on the US conversion project</li>
+                        <li>Business Improvements team lead</li>
+                    </ul>
 
-                <h4>Junior Developer</h4>  2018 - 2019
-                <ul>
-                    <li>Maintaining the hybrid JavaScript and Typescript kitchen planning software</li>
-                    <li>Maintaining the node.js backend</li>
-                    <li>Dual Screen team lead (Won the Real IT Awards 2020)</li>
-                </ul>
-            </section>
+                    <h4>Junior Developer</h4>  2018 - 2019
+                    <ul>
+                        <li>Maintaining the hybrid JavaScript and Typescript kitchen planning software</li>
+                        <li>Maintaining the node.js backend</li>
+                        <li>Dual Screen team lead <a href="https://www.real-it-awards.com/shortlist-2020/">(Won the Real IT Awards 2020)</a> Allowing the 2D CAD software to communicate in real time with the 3D visualisation software</li>
+                    </ul>
+                </section>
 
-            <section>
-                <h3>Hallmark Panels</h3>
+                <section>
+                    <h3>Hallmark Panels</h3>
 
-                <h4>Freelance</h4>  2017 - 2018
-                <ul>
-                    <li>Maintaining systems</li>
-                </ul>
+                    <h4>Freelance</h4>  2017 - 2018
+                    <ul>
+                        <li>Maintaining systems</li>
+                    </ul>
 
-                <h4>Developer</h4>  2014 - 2017
-                <ul>
-                    <li>Writing and maintaining the Door Builder in JavaScript + Angular JS</li>
-                    <li>Writing and maintaining the Node.js backend</li>
-                    <li>Managing the Digital Ocean web server via SSH</li>
-                    <li>Converting the JavaScript code base into Typescript</li>
-                    <li>Updating from Angular JS to Angular 2.0+</li>
-                    <li>Writing tracking software in Dart for use in factory</li>
-                    <li>Writing tools for other business areas in Dart</li>
-                </ul>
-            </section>
+                    <h4>Developer</h4>  2014 - 2017
+                    <ul>
+                        <li>Writing and maintaining the Door Builder in JavaScript + Angular JS</li>
+                        <li>Writing and maintaining the Node.js backend</li>
+                        <li>Managing the Digital Ocean web server via SSH</li>
+                        <li>Converting the JavaScript code base into Typescript</li>
+                        <li>Updating from Angular JS to Angular 2.0+</li>
+                        <li>Writing tracking software in Dart for use in factory</li>
+                        <li>Writing tools for other business areas in Dart</li>
+                    </ul>
+                </section>
 
-            <section>
-                <h3>Ebuyer</h3>
+                <section>
+                    <h3>Ebuyer</h3>
 
-                <h4>IT Service Desk</h4>  2010 - 2011
-                <ul>
-                    <li>Diagnosing and solving network and general computer issues</li>
-                    <li>Managing user accounts on Active Directory</li>
-                    <li>Managing printers</li>
-                    <li>Patching phones</li>
-                </ul>
-            </section>
-        </article>
+                    <h4>IT Service Desk</h4>  2010 - 2011
+                    <ul>
+                        <li>Diagnosing and solving network and general computer issues</li>
+                        <li>Managing user accounts on Active Directory</li>
+                        <li>Managing printers</li>
+                        <li>Patching phones</li>
+                    </ul>
+                </section>
+            </article>
 
-        <article>
-            <h2>Education</h2>
+            <article>
+                <h2>Education</h2>
 
-            <section>
-                <h4>Hull College</h4>  2012 - 2014
+                <section>
+                    <h4>Hull College</h4>  2012 - 2014
 
-                <ul>
-                    <li>Communication and Employability Skills for IT</li>
-                    <li>Project Planning with IT</li>
-                    <li>Computer Systems</li>
-                    <li>Information Systems</li>
-                    <li>System Analysis and Design</li>
-                    <li>Organisational System Security</li>
-                    <li>Computer Networks</li>
-                    <li>Digital Graphics</li>
-                    <li>3D Modelling</li>
-                    <li>Event Driven Programming</li>
-                    <li>Procedural Programming</li>
-                    <li>Object Oriented Programming</li>
-                    <li>Software Design and Development</li>
-                    <li>Developing Computer Games</li>
-                </ul>
-            </section>
-        </article>
+                    <ul>
+                        <li>Communication and Employability Skills for IT</li>
+                        <li>Project Planning with IT</li>
+                        <li>Computer Systems</li>
+                        <li>Information Systems</li>
+                        <li>System Analysis and Design</li>
+                        <li>Organisational System Security</li>
+                        <li>Computer Networks</li>
+                        <li>Digital Graphics</li>
+                        <li>3D Modelling</li>
+                        <li>Event Driven Programming</li>
+                        <li>Procedural Programming</li>
+                        <li>Object Oriented Programming</li>
+                        <li>Software Design and Development</li>
+                        <li>Developing Computer Games</li>
+                    </ul>
+                </section>
+            </article>
 
-        <article class=skill-container>
-            <h2 class=skill-title>Languages, Technologies and Techniques</h2>
+            <article class=skill-container>
+                <h2 class=skill-title>Languages, Technologies and Techniques</h2>
 
-            <section class=skill-expert>
-                <h4>Expert</h4>
+                <section class=skill-expert>
+                    <h4>Expert</h4>
 
-                <ul>
-                    <li><a href="https://www.typescriptlang.org/">Typescript</a></li>
-                    <li><a href="https://www.ecma-international.org/publications-and-standards/standards/ecma-262/">JavaScript</a></li>
-                    <li><a href="https://www.rust-lang.org/">Rust</a></li>
-                </ul>
-            </section>
+                    <ul>
+                        <li><a href="https://www.typescriptlang.org/">Typescript</a></li>
+                        <li><a href="https://www.ecma-international.org/publications-and-standards/standards/ecma-262/">JavaScript</a></li>
+                        <li><a href="https://www.rust-lang.org/">Rust</a></li>
+                    </ul>
+                </section>
 
-            <section class=skill-intermediate>
-                <h4>Intermediate</h4>
+                <section class=skill-intermediate>
+                    <h4>Intermediate</h4>
 
-                <ul>
-                    <li><a href="https://www.solidjs.com/">SolidJS</a></li>
-                    <li><a href="https://reactjs.org/">React</a></li>
-                    <li><a href="https://angular.io/">Angular</a></li>
-                    <li><a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a></li>
-                    <li><a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data">SIMD</a></li>
-                    <li><a href="https://en.wikipedia.org/wiki/Multithreading_(computer_architecture)">Multithreaded Programming</a></li>
+                    <ul>
+                        <li><a href="https://odin-lang.org/">Odin</a></li>
+                        <li><a href="https://www.solidjs.com/">SolidJS</a></li>
+                        <li><a href="https://reactjs.org/">React</a></li>
+                        <li><a href="https://angular.io/">Angular</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data">SIMD</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Multithreading_(computer_architecture)">Multithreaded Programming</a></li>
 
-                </ul>
-            </section>
+                    </ul>
+                </section>
 
-            <section class=skill-beginner>
-                <h4>Beginner</h4>
+                <section class=skill-beginner>
+                    <h4>Beginner</h4>
 
-                <ul>
-                    <li><a href="https://en.wikipedia.org/wiki/C_(programming_language)">C</a></li>
-                    <li><a href="https://dart.dev/">Dart</a></li>
-                    <li><a href="https://go.dev/">Go</a></li>
-                    <li><a href="https://vuejs.org/">Vue</a></li>
-                </ul>
-            </section>
-        </article>
+                    <ul>
+                        <li><a href="https://en.wikipedia.org/wiki/C_(programming_language)">C</a></li>
+                        <li><a href="https://dart.dev/">Dart</a></li>
+                        <li><a href="https://go.dev/">Go</a></li>
+                        <li><a href="https://vuejs.org/">Vue</a></li>
+                    </ul>
+                </section>
+            </article>
+        </section>
     </body>
 </html>

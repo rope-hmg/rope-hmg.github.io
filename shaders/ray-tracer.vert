@@ -1,11 +1,9 @@
-#version 100
+#version 300 es
 
 precision highp float;
 
-attribute vec2   a_position;
-// attribute Ball[] a_balls;
-
-varying   vec2 v_position;
+layout(location=0) in  vec2 a_position;
+                   out vec2 v_position;
 
 void main() {
     v_position  = a_position;
