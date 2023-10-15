@@ -49,8 +49,8 @@
                 justify-content: center;
 
                 min-width:   368px;
-                margin:      0;
-                overflow-x:  hidden;
+                max-width:   1200px;
+                margin:      auto;
             }
 
             #balls-canvas {
@@ -66,8 +66,6 @@
                     "title  title        title"    auto
                     "expert intermediate beginner" auto
                    / 33%    33%          33%;
-
-                width: 100%;
             }
 
             .skill-title {
@@ -354,7 +352,15 @@
             </p>
 
             <p>
-                Highly experienced Typescript and Rust developer.
+                A highly experienced software engineer with 10+ years of experience and strong Typescript and Rust skills. Passionate about delivering high quality customer experiences. Has a proven track record of writing efficient, performant and maintainable code.
+            </p>
+
+            <p>
+                At Wren Kitchens, led a team whose product won the Real IT awards 2020 and improved customer engagement; by allowing them to see a 3D visualisation of their kitchen being designed in real time, with aid of a designer.
+            </p>
+
+            <p>
+                Also Improved the performance of multiple sub-systems within the kitchen planner software by 99%.
             </p>
 
             <p>
@@ -370,40 +376,48 @@
                     <h4>Senior Developer</h4> 2020 - 2023
 
                     <ul>
-                        <li>Architecture team lead + scrum master + project manager</li>
-                        <li>Technical Improvements team lead + scrum master + project manager</li>
-                        <li>Scrum duties, lead developer duties, project management and business analyst for two teams</li>
-                        <li>Implemented a high performance, lockless, multithreaded job system using WebWorkers and SharedArrayBuffers.</li>
-                        <li>Implemented a path finding system to generate procedural walk around videos for customer kitchens.</li>
-                        <li>Managed time efficiently in order to complete all tasks within deadlines.</li>
-                        <li>Self-motivated, with a strong sense of personal responsibility.</li>
-                        <li>Used critical thinking to break down problems, evaluate solutions and make decisions.</li>
-                        <li>High level visioning with stakeholders</li>
-                        <li>Replaced HTML5 canvas renderer with WebGL</li>
-                        <li>Implemented a typesafe ECS system in Typescript</li>
-                        <li>Transitioned the application from an event driven architecture to a loop based architecture</li>
-                        <li>Implemented spatial partitioning to improve collision detection performance</li>
+                        <li>Prototyped a high performance, lockless, multithreaded job system in Typescript using WebWorkers and SharedArrayBuffers.</li>
+                        <li>Implemented a path finding system in Typescript using Dijkstra's algorithm to generate procedural kitchen tour videos for customers.</li>
+                        <li>Worked closely with the 3D team using Unity and C#</li>
+                        <li>Optimised the automatic worktop resize system by 80%; by removing redundant updates when non-related events happen</li>
+                        <li>Optimised the automatic decor spacing system by 99%; by utilising more efficient data structures and algorithms. In certain cases reducing time and space complexity by orders of magnitude. </li>
+                        <li>Prototyped a WebGL renderer as a replacement for the HTML5 canvas renderer as a way to improve application performance</li>
+                        <li>Led a team of 6 software engineers implementing architectural improvements (team lead + scrum master + project manager)</li>
+                        <li>Led a team of 2 software engineers cleaning up technical debt (team lead + scrum master + project manager + business analyst)</li>
+                        <li>High level visioning with stakeholders discussing how to implement the design wires and requested features</li>
+                        <li>Implemented a type safe Entity Component System (ECS) in Typescript</li>
+                        <li>Transitioned the application from an event driven architecture to a loop based architecture which improved data flow reasoning among developers</li>
+                        <li>Implemented a grid based spatial partitioning system in Typescript to improve collision detection performance by reducing the number of potential collisions that need to be examined</li>
                         <li>Implemented and maintained a Rust based time tracking work log system</li>
                         <li>Implemented and maintained a Rust based development environment manager. (Starting docker containers, running build scripts, managing config files, etc)</li>
+                        <li>Implemented a 30 minute bi-weekly coding standards meetings to resolve arguments among team members</li>
+                        <li>Optimised the automatic worktop spawning system by 99%; by only updating entity colliders once all worktops were spawned</li>
+                        <li>Singlehandedly implemented a new product range including the creation of new React.js components and modifications to existing internal systems</li>
                     </ul>
 
                     <h4>Intermediate Developer</h4>  2019 - 2020
                     <ul>
-                        <li>Managing the graduate scheme</li>
-                        <li>Training multiple intakes of graduate developers</li>
-                        <li>Interviewing candidates</li>
-                        <li>Mentoring junior developers</li>
-                        <li>Managing the webpack based build system</li>
-                        <li>Handling software deployments</li>
-                        <li>Working on the US conversion project</li>
-                        <li>Business Improvements team lead</li>
+                        <li>Ran the 3 month graduate scheme for a year and trained 4 intakes of graduate developers in Git, React.js, Typescript, Linear Algebra and more.</li>
+                        <li>Mentored junior developers</li>
+                        <li>Interviewed candidates</li>
+                        <li>Optimised the documentation generation system by 88%; by prioritising the order of expressions in a complex conditional</li>
+                        <li>Improved the Webpack based build system by reducing the lines of code from 5000 to 250 while also adding a new feature</li>
+                        <li>Added a new feature where the build system would be able to output different releases based on the product being targeted</li>
+                        <li>Optimised the load time of one product by 81%; by using build flags to selectively enable or disable software features</li>
+                        <li>Handled merging of completed work into master and subsequent deployment using a series of technologies. Jenkins (CI/CD), Emissary (A in-house application for managing Docker images) and Amazon ECS</li>
+                        <li>Worked as an engineer as part of the US conversion project</li>
+                        <li>Led a team of 3 software engineers implementing small scale improvements to the kitchen planner for a year (team lead + scrum master). Covering all aspects from the React.js frontend to the internal engine code.</li>
                     </ul>
 
                     <h4>Junior Developer</h4>  2018 - 2019
                     <ul>
-                        <li>Maintaining the hybrid JavaScript and Typescript kitchen planning software</li>
-                        <li>Maintaining the node.js backend</li>
-                        <li>Dual Screen team lead <a href="https://www.real-it-awards.com/shortlist-2020/">(Won the Real IT Awards 2020)</a> Allowing the 2D CAD software to communicate in real time with the 3D visualisation software</li>
+                        <li>Maintained the 500kloc React.js, HTML5 Canvas and Typescript kitchen planning software</li>
+                        <li>Maintained the 10kloc Node.js backend using JavaScript</li>
+                        <li>Worked as an engineer as part of the Bugs team 10 months</li>
+                        <li>Optimised the overall speed of the canvas renderer by 50%; by fixing a bug where an off by one in an event handler caused an extra render</li>
+                        <li>Led a team of 2 software engineers on the Dual Screen project. Allowing the Typescript 2D CAD software to communicate in real time with the Unity C# 3D visualisation software. Which as of 2023 only has 5 bugs to it's name. <a href="https://www.real-it-awards.com/shortlist-2020/">(Won the Real IT Awards 2020)</a></li>
+                        <li>Optimised the canvas hover animation by 60%; by using a more time efficient algorithm when determining the smallest rectangle of the canvas to redraw</li>
+                        <li>Optimised the automatic decor spawning system by 66%; by replacing 3 specific _.get calls with direct property access in the renderer's hottest loop </li>
                     </ul>
                 </section>
 
@@ -417,13 +431,14 @@
 
                     <h4>Developer</h4>  2014 - 2017
                     <ul>
-                        <li>Writing and maintaining the Door Builder in JavaScript + Angular JS</li>
-                        <li>Writing and maintaining the Node.js backend</li>
-                        <li>Managing the Digital Ocean web server via SSH</li>
-                        <li>Converting the JavaScript code base into Typescript</li>
-                        <li>Updating from Angular JS to Angular 2.0+</li>
-                        <li>Writing tracking software in Dart for use in factory</li>
-                        <li>Writing tools for other business areas in Dart</li>
+                        <li>Singlehandedly wrote and maintained the 10kloc Door Builder web application in JavaScript + AngularJS</li>
+                        <li>Singlehandedly wrote and maintained the 1kloc Node.js backend in JavaScript</li>
+                        <li>Singlehandedly wrote and maintained the 1kloc Factory Progress web application in Dart</li>
+                        <li>Singlehandedly wrote and maintained tools for other business areas in Dart</li>
+                        <li>Managed the Digital Ocean web server via SSH</li>
+                        <li>Managed the MongoDB database</li>
+                        <li>Converted all JavaScript code bases into Typescript</li>
+                        <li>Updated from AngularJS to Angular 2.0+</li>
                     </ul>
                 </section>
 
@@ -432,10 +447,12 @@
 
                     <h4>IT Service Desk</h4>  2010 - 2011
                     <ul>
-                        <li>Diagnosing and solving network and general computer issues</li>
-                        <li>Managing user accounts on Active Directory</li>
-                        <li>Managing printers</li>
-                        <li>Patching phones</li>
+                        <li>Engaged in user support interactions via telephone, chat and email platforms</li>
+                        <li>Addressed user generated service desk concerns and decided when to escalate problems to specialist team members</li>
+                        <li>Configured hardware, devices, and software for employee work stations</li>
+                        <li>Configured and tested new software and hardware</li>
+                        <li>Removed malware, and other threats from laptops and desktop systems</li>
+                        <li>Installed, configured and maintained computer and networked systems</li>
                     </ul>
                 </section>
             </article>
@@ -466,7 +483,53 @@
             </article>
 
             <article class=skill-container>
-                <h2 class=skill-title>Languages, Technologies and Techniques</h2>
+                <h2 class=skill-title>Skills</h2>
+
+                <section class=skill-expert>
+                    <h4>Expert</h4>
+
+                    <ul>
+                        <li><a href="https://git-scm.com/">Git</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Mentorship">Mentoring</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Project_management">Project Management</a></li>
+                        <li><a href="https://www.scrum.org/learning-series/what-is-scrum">Scrum</a></li>
+                        <li><a href="https://reactjs.org/">React.js</a></li>
+                        <li><a href="https://www.solidjs.com/">SolidJS</a></li>
+                    </ul>
+                </section>
+
+                <section class=skill-intermediate>
+                    <h4>Intermediate</h4>
+
+                    <ul>
+                        <li><a href="https://www.docker.com/">Docker</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Linear_algebra">Linear Algebra</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Secure_Shell">SSH</a></li>
+                        <li><a href="https://threejs.org/">Three.js</a></li>
+                        <li><a href="https://www.mongodb.com/">MongoDB</a></li>
+                        <li><a href="https://angular.io/">Angular</a></li>
+                        <li><a href="https://vuejs.org/">Vue</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data">SIMD</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Multithreading_(computer_architecture)">Multithreaded Programming</a></li>
+                    </ul>
+                </section>
+
+                <section class=skill-beginner>
+                    <h4>Beginner</h4>
+
+                    <ul>
+                        <li><a href="https://aws.amazon.com/what-is-aws/">AWS - S3, ECS, EC2</a></li>
+                        <li><a href="https://aws.amazon.com/dynamodb/">DynamoDB</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Geometric_algebra">Geometric Algebra</a></li>
+                        <li><a href="https://www.jenkins.io/">Jenkins (CI/CD)</a></li>
+                        <li><a href="https://unity.com/">Unity</a></li>
+                    </ul>
+                </section>
+            </article>
+
+            <article class=skill-container>
+                <h2 class=skill-title>Programming Languages</h2>
 
                 <section class=skill-expert>
                     <h4>Expert</h4>
@@ -475,6 +538,7 @@
                         <li><a href="https://www.typescriptlang.org/">Typescript</a></li>
                         <li><a href="https://www.ecma-international.org/publications-and-standards/standards/ecma-262/">JavaScript</a></li>
                         <li><a href="https://www.rust-lang.org/">Rust</a></li>
+                        <li><a href="https://odin-lang.org/">Odin</a></li>
                     </ul>
                 </section>
 
@@ -482,13 +546,12 @@
                     <h4>Intermediate</h4>
 
                     <ul>
-                        <li><a href="https://odin-lang.org/">Odin</a></li>
-                        <li><a href="https://www.solidjs.com/">SolidJS</a></li>
-                        <li><a href="https://reactjs.org/">React</a></li>
-                        <li><a href="https://angular.io/">Angular</a></li>
-                        <li><a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a></li>
-                        <li><a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data">SIMD</a></li>
-                        <li><a href="https://en.wikipedia.org/wiki/Multithreading_(computer_architecture)">Multithreaded Programming</a></li>
+                        <li><a href="https://www.java.com/">Java</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/C_Sharp_(programming_language)">C#</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/C_(programming_language)">C</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/C++">C++</a></li>
+                        <li><a href="https://www.python.org/">Python</a></li>
+
 
                     </ul>
                 </section>
@@ -497,10 +560,35 @@
                     <h4>Beginner</h4>
 
                     <ul>
-                        <li><a href="https://en.wikipedia.org/wiki/C_(programming_language)">C</a></li>
-                        <li><a href="https://dart.dev/">Dart</a></li>
                         <li><a href="https://go.dev/">Go</a></li>
-                        <li><a href="https://vuejs.org/">Vue</a></li>
+                        <li><a href="https://kotlinlang.org/">Kotlin</a></li>
+                        <li><a href="https://www.swift.org/">Swift</a></li>
+                        <li><a href="https://ziglang.org/">Zig</a></li>
+                        <li><a href="https://dart.dev/">Dart</a></li>
+                    </ul>
+                </section>
+            </article>
+
+            <article class=skill-container>
+                <h2 class=skill-title>Languages</h2>
+
+                <section class=skill-expert>
+                    <h4>Native</h4>
+
+                    <ul>
+                        <li>English</li>
+                    </ul>
+                </section>
+
+                <section class=skill-intermediate>
+                    <h4>Intermediate</h4>
+                </section>
+
+                <section class=skill-beginner>
+                    <h4>Beginner</h4>
+
+                    <ul>
+                        <li>Chinese (Mandarin)</li>
                     </ul>
                 </section>
             </article>
