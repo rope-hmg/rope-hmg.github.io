@@ -1,34 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
     <head>
-        <meta charset="utf-8">
+        <meta charset="utf-8" />
 
         <title>Resume</title>
 
         <style>
             :root {
-                --h1-colour:   #978E7F;
-                --h2-colour:   #B49B73;
-                --bg-colour:   #F4F4F4;
-                --font-colour: #2D2620;
-                --link-colour: #AFA597;
+                --h1-colour: #978e7f;
+                --h2-colour: #b49b73;
+                --bg-colour: #f4f4f4;
+                --font-colour: #2d2620;
+                --link-colour: #afa597;
             }
 
             @media (prefers-color-scheme: dark) {
                 :root {
-                    --h1-colour:   #978E7F;
-                    --h2-colour:   #B49B73;
-                    --bg-colour:   #2D2620;
-                    --font-colour: #F4F4F4;
-                    --link-colour: #AFA597;
+                    --h1-colour: #978e7f;
+                    --h2-colour: #b49b73;
+                    --bg-colour: #2d2620;
+                    --font-colour: #f4f4f4;
+                    --link-colour: #afa597;
                 }
             }
 
             body {
-                margin:      0;
+                margin: 0;
                 font-family: Arial, Helvetica, sans-serif;
-                background:  var(--bg-colour);
-                color:       var(--font-colour);
+                background: var(--bg-colour);
+                color: var(--font-colour);
             }
 
             h1 {
@@ -48,9 +48,9 @@
                 display: grid;
                 justify-content: center;
 
-                min-width:   368px;
-                max-width:   1200px;
-                margin:      auto;
+                min-width: 368px;
+                max-width: 1200px;
+                margin: auto;
             }
 
             #balls-canvas {
@@ -63,9 +63,9 @@
             .skill-container {
                 display: grid;
                 grid-template:
-                    "title  title        title"    auto
+                    "title  title        title" auto
                     "expert intermediate beginner" auto
-                   / 33%    33%          33%;
+                    / 33% 33% 33%;
             }
 
             .skill-title {
@@ -120,12 +120,12 @@
                 const balls = new Array(BALL_COLOURS.length);
 
                 for (let i = 0; i < BALL_COLOURS.length; i += 1) {
-                    const radius    = randomRange(25, 50);
-                    const mass      = Math.PI * radius * radius * 0.0001;
-                    const velocity  = Vec2.randomUnit();
-                    const speed     = 0.3;
-                    const position  = new Vec2(canvas.width >> 1, canvas.height >> 1);
-                    const colour    = BALL_COLOURS[i];
+                    const radius = randomRange(25, 50);
+                    const mass = Math.PI * radius * radius * 0.0001;
+                    const velocity = Vec2.randomUnit();
+                    const speed = 0.3;
+                    const position = new Vec2(canvas.width >> 1, canvas.height >> 1);
+                    const colour = BALL_COLOURS[i];
 
                     velocity.mulAssign(speed);
 
@@ -138,21 +138,20 @@
             function respawnIfOffscreen(balls, canvas) {
                 for (let i = 0; i < balls.length; i += 1) {
                     const { position, radius } = balls[i];
-                    const { x, y }             = position;
-                    const { width, height }    = canvas;
+                    const { x, y } = position;
+                    const { width, height } = canvas;
 
                     if (
-                            Number.isNaN(x)
-                        ||  Number.isNaN(y)
-                        || !Number.isFinite(x)
-                        || !Number.isFinite(y)
-
-                        || x + radius < 0
-                        || y - radius < 0
-                        || x - radius > width
-                        || y + radius > height
+                        Number.isNaN(x) ||
+                        Number.isNaN(y) ||
+                        !Number.isFinite(x) ||
+                        !Number.isFinite(y) ||
+                        x + radius < 0 ||
+                        y - radius < 0 ||
+                        x - radius > width ||
+                        y + radius > height
                     ) {
-                        position.x = randomRange(radius, width  - radius);
+                        position.x = randomRange(radius, width - radius);
                         position.y = randomRange(radius, height - radius);
                     }
                 }
@@ -190,15 +189,25 @@
                     const ball = balls[i];
 
                     const { position, velocity, radius } = ball;
-                    const { width, height }              = canvas
+                    const { width, height } = canvas;
 
                     let reflectionNormal;
 
-                         if (position.x - radius <= 0)      { reflectionNormal = L_NORMAL; position.x =          radius; }
-                    else if (position.y - radius <= 0)      { reflectionNormal = T_NORMAL; position.y =          radius; }
-                    else if (position.x + radius >= width)  { reflectionNormal = R_NORMAL; position.x = width  - radius; }
-                    else if (position.y + radius >= height) { reflectionNormal = B_NORMAL; position.y = height - radius; }
-                    else { /* Don't have to do anything here. */ }
+                    if (position.x - radius <= 0) {
+                        reflectionNormal = L_NORMAL;
+                        position.x = radius;
+                    } else if (position.y - radius <= 0) {
+                        reflectionNormal = T_NORMAL;
+                        position.y = radius;
+                    } else if (position.x + radius >= width) {
+                        reflectionNormal = R_NORMAL;
+                        position.x = width - radius;
+                    } else if (position.y + radius >= height) {
+                        reflectionNormal = B_NORMAL;
+                        position.y = height - radius;
+                    } else {
+                        /* Don't have to do anything here. */
+                    }
 
                     if (reflectionNormal) {
                         velocity.negate();
@@ -206,8 +215,8 @@
                         const scalar = velocity.dot(reflectionNormal);
 
                         reflectionNormal.mul(scalar, para);
-                        velocity        .sub(para,   perp);
-                        para            .sub(perp,   velocity);
+                        velocity.sub(para, perp);
+                        para.sub(perp, velocity);
                     }
                 }
             }
@@ -222,13 +231,7 @@
                     if (lPoint <= textL || rPoint >= textR) {
                         context.fillStyle = colour;
                         context.beginPath();
-                        context.arc(
-                            Math.floor(position.x),
-                            Math.floor(position.y),
-                            radius,
-                            0,
-                            2 * Math.PI,
-                        );
+                        context.arc(Math.floor(position.x), Math.floor(position.y), radius, 0, 2 * Math.PI);
                         context.fill();
                     }
                 }
@@ -244,13 +247,7 @@
                     if (rPoint >= textL && lPoint <= textR) {
                         context.strokeStyle = colour;
                         context.beginPath();
-                        context.arc(
-                            Math.floor(position.x),
-                            Math.floor(position.y),
-                            radius,
-                            0,
-                            2 * Math.PI,
-                        );
+                        context.arc(Math.floor(position.x), Math.floor(position.y), radius, 0, 2 * Math.PI);
                         context.stroke();
                     }
                 }
@@ -259,34 +256,26 @@
             async function main() {
                 const name = document.getElementById("name");
 
-                let {
-                    left:  textL,
-                    right: textR,
-                    width: textW,
-                } = name.getClientRects()[0];
+                let { left: textL, right: textR, width: textW } = name.getClientRects()[0];
 
                 // Add some because it's wrong a bit.
                 const textWExtraBit = 16;
 
                 textW += textWExtraBit;
 
-                const canvas  = document.getElementById("balls-canvas");
+                const canvas = document.getElementById("balls-canvas");
                 const context = canvas.getContext("2d");
 
-                canvas.width  = window.innerWidth;
+                canvas.width = window.innerWidth;
                 canvas.height = window.innerHeight;
 
                 const debouncedSetCanvasSize = debounce(() => {
-                    canvas.width  = window.innerWidth;
+                    canvas.width = window.innerWidth;
                     canvas.height = window.innerHeight;
-                    screenW       = window.innerWidth;
-                    screenH       = window.innerHeight;
+                    screenW = window.innerWidth;
+                    screenH = window.innerHeight;
 
-                    ({
-                        left:  textL,
-                        right: textR,
-                        width: textW,
-                    } = name.getClientRects()[0]);
+                    ({ left: textL, right: textR, width: textW } = name.getClientRects()[0]);
 
                     textW += textWExtraBit;
                 }, 150);
@@ -335,157 +324,36 @@
     </head>
 
     <body>
-        <canvas id=balls-canvas></canvas>
+        <canvas id="balls-canvas"></canvas>
 
-        <section id=content>
-            <h1 id=name>Hector Maddock-Greene</h1>
+        <section id="content">
+            <h1 id="name">Hector Maddock-Greene</h1>
 
-            <p>
-                <a href="https://www.linkedin.com/in/hector-maddock-greene-14a8a3234/">LinkedIn</a>
-                <a href="https://github.com/rope-hmg">GitHub</a>
-            </p>
+            <article class="skill-container">
+                <h2 class="skill-title">Links</h2>
 
-            <p>
-                <a href="./snake.html">Snake</a>
-                <a href="./webgl.html">Path Tracer</a>
-                <a href="./2048.html">2048</a>
-            </p>
-
-            <p>
-                A highly experienced software engineer with 10+ years of experience and strong Typescript and Rust skills. Passionate about delivering high quality customer experiences. Has a proven track record of writing efficient, performant and maintainable code.
-            </p>
-
-            <p>
-                At Wren Kitchens, led a team whose product won the Real IT awards 2020 and improved customer engagement; by allowing them to see a 3D visualisation of their kitchen being designed in real time, with aid of a designer.
-            </p>
-
-            <p>
-                Also Improved the performance of multiple sub-systems within the kitchen planner software by 99%.
-            </p>
-
-            <p>
-                Currently looking for my next big role.
-            </p>
-
-            <article>
-                <h2>Work</h2>
-
-                <section>
-                    <h3>Wren Kitchens</h3>
-
-                    <h4>Senior Developer</h4> 2020 - 2023
-
-                    <ul>
-                        <li>Prototyped a high performance, lockless, multithreaded job system in Typescript using WebWorkers and SharedArrayBuffers.</li>
-                        <li>Implemented a path finding system in Typescript using Dijkstra's algorithm to generate procedural kitchen tour videos for customers.</li>
-                        <li>Worked closely with the 3D team using Unity and C#</li>
-                        <li>Optimised the automatic worktop resize system by 80%; by removing redundant updates when non-related events happen</li>
-                        <li>Optimised the automatic decor spacing system by 99%; by utilising more efficient data structures and algorithms. In certain cases reducing time and space complexity by orders of magnitude. </li>
-                        <li>Prototyped a WebGL renderer as a replacement for the HTML5 canvas renderer as a way to improve application performance</li>
-                        <li>Led a team of 6 software engineers implementing architectural improvements (team lead + scrum master + project manager)</li>
-                        <li>Led a team of 2 software engineers cleaning up technical debt (team lead + scrum master + project manager + business analyst)</li>
-                        <li>High level visioning with stakeholders discussing how to implement the design wires and requested features</li>
-                        <li>Implemented a type safe Entity Component System (ECS) in Typescript</li>
-                        <li>Transitioned the application from an event driven architecture to a loop based architecture which improved data flow reasoning among developers</li>
-                        <li>Implemented a grid based spatial partitioning system in Typescript to improve collision detection performance by reducing the number of potential collisions that need to be examined</li>
-                        <li>Implemented and maintained a Rust based time tracking work log system</li>
-                        <li>Implemented and maintained a Rust based development environment manager. (Starting docker containers, running build scripts, managing config files, etc)</li>
-                        <li>Implemented a 30 minute bi-weekly coding standards meetings to resolve arguments among team members</li>
-                        <li>Optimised the automatic worktop spawning system by 99%; by only updating entity colliders once all worktops were spawned</li>
-                        <li>Singlehandedly implemented a new product range including the creation of new React.js components and modifications to existing internal systems</li>
-                    </ul>
-
-                    <h4>Intermediate Developer</h4>  2019 - 2020
-                    <ul>
-                        <li>Ran the 3 month graduate scheme for a year and trained 4 intakes of graduate developers in Git, React.js, Typescript, Linear Algebra and more.</li>
-                        <li>Mentored junior developers</li>
-                        <li>Interviewed candidates</li>
-                        <li>Optimised the documentation generation system by 88%; by prioritising the order of expressions in a complex conditional</li>
-                        <li>Improved the Webpack based build system by reducing the lines of code from 5000 to 250 while also adding a new feature</li>
-                        <li>Added a new feature where the build system would be able to output different releases based on the product being targeted</li>
-                        <li>Optimised the load time of one product by 81%; by using build flags to selectively enable or disable software features</li>
-                        <li>Handled merging of completed work into master and subsequent deployment using a series of technologies. Jenkins (CI/CD), Emissary (A in-house application for managing Docker images) and Amazon ECS</li>
-                        <li>Worked as an engineer as part of the US conversion project</li>
-                        <li>Led a team of 3 software engineers implementing small scale improvements to the kitchen planner for a year (team lead + scrum master). Covering all aspects from the React.js frontend to the internal engine code.</li>
-                    </ul>
-
-                    <h4>Junior Developer</h4>  2018 - 2019
-                    <ul>
-                        <li>Maintained the 500kloc React.js, HTML5 Canvas and Typescript kitchen planning software</li>
-                        <li>Maintained the 10kloc Node.js backend using JavaScript</li>
-                        <li>Worked as an engineer as part of the Bugs team 10 months</li>
-                        <li>Optimised the overall speed of the canvas renderer by 50%; by fixing a bug where an off by one in an event handler caused an extra render</li>
-                        <li>Led a team of 2 software engineers on the Dual Screen project. Allowing the Typescript 2D CAD software to communicate in real time with the Unity C# 3D visualisation software. Which as of 2023 only has 5 bugs to it's name. <a href="https://www.real-it-awards.com/shortlist-2020/">(Won the Real IT Awards 2020)</a></li>
-                        <li>Optimised the canvas hover animation by 60%; by using a more time efficient algorithm when determining the smallest rectangle of the canvas to redraw</li>
-                        <li>Optimised the automatic decor spawning system by 66%; by replacing 3 specific _.get calls with direct property access in the renderer's hottest loop </li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h3>Hallmark Panels</h3>
-
-                    <h4>Freelance</h4>  2017 - 2018
-                    <ul>
-                        <li>Maintaining systems</li>
-                    </ul>
-
-                    <h4>Developer</h4>  2014 - 2017
-                    <ul>
-                        <li>Singlehandedly wrote and maintained the 10kloc Door Builder web application in JavaScript + AngularJS</li>
-                        <li>Singlehandedly wrote and maintained the 1kloc Node.js backend in JavaScript</li>
-                        <li>Singlehandedly wrote and maintained the 1kloc Factory Progress web application in Dart</li>
-                        <li>Singlehandedly wrote and maintained tools for other business areas in Dart</li>
-                        <li>Managed the Digital Ocean web server via SSH</li>
-                        <li>Managed the MongoDB database</li>
-                        <li>Converted all JavaScript code bases into Typescript</li>
-                        <li>Updated from AngularJS to Angular 2.0+</li>
-                    </ul>
-                </section>
-
-                <section>
-                    <h3>Ebuyer</h3>
-
-                    <h4>IT Service Desk</h4>  2010 - 2011
-                    <ul>
-                        <li>Engaged in user support interactions via telephone, chat and email platforms</li>
-                        <li>Addressed user generated service desk concerns and decided when to escalate problems to specialist team members</li>
-                        <li>Configured hardware, devices, and software for employee work stations</li>
-                        <li>Configured and tested new software and hardware</li>
-                        <li>Removed malware, and other threats from laptops and desktop systems</li>
-                        <li>Installed, configured and maintained computer and networked systems</li>
-                    </ul>
-                </section>
+                <p>
+                    <a href="https://www.linkedin.com/in/hector-maddock-greene-14a8a3234/">LinkedIn</a>
+                    <a href="https://github.com/rope-hmg">GitHub</a>
+                </p>
             </article>
 
-            <article>
-                <h2>Education</h2>
+            <article class="skill-container">
+                <h2 class="skill-title">Projects</h2>
 
-                <section>
-                    <h4>Hull College</h4>  2012 - 2014
-
-                    <ul>
-                        <li>Communication and Employability Skills for IT</li>
-                        <li>Project Planning with IT</li>
-                        <li>Computer Systems</li>
-                        <li>Information Systems</li>
-                        <li>System Analysis and Design</li>
-                        <li>Organisational System Security</li>
-                        <li>Computer Networks</li>
-                        <li>Digital Graphics</li>
-                        <li>3D Modelling</li>
-                        <li>Event Driven Programming</li>
-                        <li>Procedural Programming</li>
-                        <li>Object Oriented Programming</li>
-                        <li>Software Design and Development</li>
-                        <li>Developing Computer Games</li>
-                    </ul>
-                </section>
+                <ul>
+                    <li><a href="./cv.html">Interactive CV</a></li>
+                    <li><a href="./cv.pdf">Download CV</a></li>
+                    <li><a href="./snake.html">Snake</a></li>
+                    <li><a href="./webgl.html">Path Tracer (Work in Progress)</a></li>
+                    <li><a href="./2048.html">2048</a></li>
+                </ul>
             </article>
 
-            <article class=skill-container>
-                <h2 class=skill-title>Skills</h2>
+            <article class="skill-container">
+                <h2 class="skill-title">Skills</h2>
 
-                <section class=skill-expert>
+                <section class="skill-expert">
                     <h4>Expert</h4>
 
                     <ul>
@@ -498,7 +366,7 @@
                     </ul>
                 </section>
 
-                <section class=skill-intermediate>
+                <section class="skill-intermediate">
                     <h4>Intermediate</h4>
 
                     <ul>
@@ -511,11 +379,15 @@
                         <li><a href="https://vuejs.org/">Vue</a></li>
                         <li><a href="https://en.wikipedia.org/wiki/WebGL">WebGL</a></li>
                         <li><a href="https://en.wikipedia.org/wiki/Single_instruction,_multiple_data">SIMD</a></li>
-                        <li><a href="https://en.wikipedia.org/wiki/Multithreading_(computer_architecture)">Multithreaded Programming</a></li>
+                        <li>
+                            <a href="https://en.wikipedia.org/wiki/Multithreading_(computer_architecture)"
+                                >Multithreaded Programming</a
+                            >
+                        </li>
                     </ul>
                 </section>
 
-                <section class=skill-beginner>
+                <section class="skill-beginner">
                     <h4>Beginner</h4>
 
                     <ul>
@@ -528,21 +400,25 @@
                 </section>
             </article>
 
-            <article class=skill-container>
-                <h2 class=skill-title>Programming Languages</h2>
+            <article class="skill-container">
+                <h2 class="skill-title">Programming Languages</h2>
 
-                <section class=skill-expert>
+                <section class="skill-expert">
                     <h4>Expert</h4>
 
                     <ul>
                         <li><a href="https://www.typescriptlang.org/">Typescript</a></li>
-                        <li><a href="https://www.ecma-international.org/publications-and-standards/standards/ecma-262/">JavaScript</a></li>
+                        <li>
+                            <a href="https://www.ecma-international.org/publications-and-standards/standards/ecma-262/"
+                                >JavaScript</a
+                            >
+                        </li>
                         <li><a href="https://www.rust-lang.org/">Rust</a></li>
                         <li><a href="https://odin-lang.org/">Odin</a></li>
                     </ul>
                 </section>
 
-                <section class=skill-intermediate>
+                <section class="skill-intermediate">
                     <h4>Intermediate</h4>
 
                     <ul>
@@ -551,12 +427,10 @@
                         <li><a href="https://en.wikipedia.org/wiki/C_(programming_language)">C</a></li>
                         <li><a href="https://en.wikipedia.org/wiki/C++">C++</a></li>
                         <li><a href="https://www.python.org/">Python</a></li>
-
-
                     </ul>
                 </section>
 
-                <section class=skill-beginner>
+                <section class="skill-beginner">
                     <h4>Beginner</h4>
 
                     <ul>
@@ -565,30 +439,6 @@
                         <li><a href="https://www.swift.org/">Swift</a></li>
                         <li><a href="https://ziglang.org/">Zig</a></li>
                         <li><a href="https://dart.dev/">Dart</a></li>
-                    </ul>
-                </section>
-            </article>
-
-            <article class=skill-container>
-                <h2 class=skill-title>Languages</h2>
-
-                <section class=skill-expert>
-                    <h4>Native</h4>
-
-                    <ul>
-                        <li>English</li>
-                    </ul>
-                </section>
-
-                <section class=skill-intermediate>
-                    <h4>Intermediate</h4>
-                </section>
-
-                <section class=skill-beginner>
-                    <h4>Beginner</h4>
-
-                    <ul>
-                        <li>Chinese (Mandarin)</li>
                     </ul>
                 </section>
             </article>
